@@ -4,7 +4,7 @@ In questa guida costruiamo un assistente vocale AI portatile con:
 
 | Componente | Funzione |
 |---|---|
-| **Raspberry Pi 4 Model B** (consigliati 2 GB di RAM o più) | il "cervello" |
+| **Raspberry Pi 4 Model B** (2 GB o più) oppure **Raspberry Pi 5** (4 GB o più) | il "cervello" |
 | **PiSugar Whisplay HAT** | display LCD, microfoni, altoparlante, pulsante e LED RGB (codec audio WM8960) |
 | **PiSugar 3 Plus 5000 mAh** | batteria, RTC e gestione dell'alimentazione |
 | microSD da 16 GB o più (classe A1/A2) | sistema operativo |
@@ -22,19 +22,41 @@ lo stesso dei tutorial del canale YouTube PiSugar Studio. Funziona così:
 > supporta "tutti i modelli con header a 40 pin", quindi anche il Pi 4. Il Pi 4 è molto più veloce del Zero 2 W
 > e con i servizi cloud va benissimo.
 
+### Pi 4 o Pi 5?
+
+Entrambi funzionano con questa guida, e tutti i passaggi sono identici. Il Pi 5 offre:
+- **più velocità:** risposte e animazioni del display più fluide;
+- **compatibilità con la batteria:** il README ufficiale indica proprio la PiSugar 3 Plus da 5000 mAh
+  come versione per il Pi 5;
+- **stesso header a 40 pin:** Whisplay e PiSugar si montano allo stesso modo.
+
+Quanta RAM serve:
+- **4 GB bastano** con i servizi cloud (OpenAI, Anthropic, Gemini), cioè la configurazione di questa guida;
+- **8 GB sono consigliati** dal README ufficiale se vuoi far girare l'AI in locale, senza Internet
+  (Ollama, Whisper locale: Fase 9).
+
+Attenzione al **raffreddamento**: il Pi 5 scalda più del Pi 4, e il Whisplay copre la zona del processore,
+dove andrebbe la ventola ufficiale (Active Cooler). Prima di acquistarla, misura lo spazio tra il Pi e il
+Whisplay. Le alternative sono:
+- un **dissipatore passivo basso**;
+- un **GPIO stacking header** (prolunga a 40 pin) per alzare il Whisplay e fare spazio alla ventola.
+
+Se passi da un Pi 4 già configurato a un Pi 5, segui la sezione
+[Passare dal Pi 4 al Pi 5](#passare-dal-pi-4-al-pi-5).
+
 ---
 
 ## Fase 1: montaggio hardware
 
 1. **Spegni tutto.** Non montare né smontare niente mentre la batteria è accesa.
-2. **Monta la PiSugar 3 Plus SOTTO il Raspberry Pi 4.**
+2. **Monta la PiSugar 3 Plus SOTTO il Raspberry Pi.**
    - La PiSugar 3 Plus si collega con dei **pin a molla (pogo pin)** che toccano da sotto i pin del GPIO
      (5 V, GND, SDA, SCL). Non occupa l'header e lascia libero il lato superiore per il Whisplay.
    - Fissala con le viti e i distanziali in dotazione nei 4 fori del Pi. Controlla che i pogo pin
      siano allineati e premano sulle saldature dei pin 1–6 del GPIO.
    - Collega il connettore della batteria alla scheda PiSugar, se non è già collegato.
 3. **Inserisci il Whisplay HAT SOPRA, sull'header GPIO a 40 pin.**
-   - Il Whisplay ha il formato del Pi Zero, quindi sul Pi 4 copre solo una parte della scheda.
+   - Il Whisplay ha il formato del Pi Zero, quindi sul Pi 4 e sul Pi 5 copre solo una parte della scheda.
      Allinea il **pin 1** del connettore femmina del Whisplay con il pin 1 del Pi (l'angolo vicino al
      foro di montaggio, lato slot microSD) e premi in modo uniforme fino in fondo.
    - Se vuoi più spazio o una ventola, usa un **GPIO stacking header** (prolunga) di 40 pin.
@@ -44,14 +66,15 @@ lo stesso dei tutorial del canale YouTube PiSugar Studio. Funziona così:
    Per accendere o spegnere premi il pulsante della PiSugar (di solito un tocco breve seguito da una
    pressione lunga; controlla la documentazione della tua revisione: <https://docs.pisugar.com>).
 
-> Consiglio: il Pi 4 scalda. Un piccolo dissipatore sul SoC aiuta, soprattutto dentro un case.
+> Consiglio: il Pi scalda, il Pi 5 più del Pi 4. Un dissipatore sul processore aiuta, soprattutto dentro
+> un case (sul Pi 5 vedi la nota sul raffreddamento in apertura).
 
 ---
 
 ## Fase 2: installare il sistema operativo
 
 1. Sul PC scarica **Raspberry Pi Imager**: <https://www.raspberrypi.com/software/>
-2. Scegli il dispositivo **Raspberry Pi 4** e il sistema **Raspberry Pi OS (64-bit)**, completo o Lite
+2. Scegli il dispositivo (**Raspberry Pi 4** o **Raspberry Pi 5**) e il sistema **Raspberry Pi OS (64-bit)**, completo o Lite
    (Bookworm o più recente). Il repo Whisplay consiglia la versione ufficiale completa; la Lite va bene
    se usi il Pi solo in modalità headless.
 3. In **"Modifica impostazioni"** (icona ingranaggio) imposta:
@@ -261,6 +284,41 @@ Istruzioni complete in **[videotex/README.md](videotex/README.md)**. In breve:
 cd ~ && git clone -b claude/raspberry-pi-ai-assistant-vlgr75 https://github.com/retroCyberdan/Assistant-PAi.git
 bash ~/Assistant-PAi/videotex/install.sh
 ```
+
+---
+
+## Passare dal Pi 4 al Pi 5
+
+Conviene installare tutto da zero su una **nuova microSD**: si fa in fretta e si evitano problemi.
+La microSD del Pi 4 resta intatta come copia di sicurezza.
+
+1. **Salva le tue impostazioni dal Pi 4.** Dal PC, con WinSCP / Cyberduck / FileZilla (connessione SFTP
+   a `pai.local`) oppure con questi comandi:
+   ```bash
+   mkdir -p backup-pai
+   scp pi@pai.local:~/whisplay-ai-chatbot/.env backup-pai/
+   scp -r pi@pai.local:~/pai-assets backup-pai/          # il tuo logo
+   scp -r pi@pai.local:~/.config/pai-panel backup-pai/   # password del pannello web
+   ```
+   Il file `.env` contiene le tue **chiavi API**: tienilo al sicuro e non caricarlo su GitHub.
+2. **Spegni e smonta** batteria e Whisplay dal Pi 4. Rimontali sul Pi 5 come nella Fase 1.
+3. **Prepara una nuova microSD** (Fase 2), scegliendo **Raspberry Pi 5** in Raspberry Pi Imager. Usa lo
+   stesso hostname (`pai`) e lo stesso utente (`pi`), così indirizzi e percorsi non cambiano.
+4. **Ripeti le Fasi 3, 4 e 5:** driver Whisplay, software della batteria, installazione del chatbot.
+5. **Rimetti le tue impostazioni** sul Pi 5:
+   ```bash
+   scp backup-pai/.env pi@pai.local:~/whisplay-ai-chatbot/.env
+   scp -r backup-pai/pai-assets pi@pai.local:~/
+   ssh pi@pai.local "mkdir -p ~/.config"
+   scp -r backup-pai/pai-panel pi@pai.local:~/.config/
+   ```
+   Non serve rifare la Fase 6: le scelte di ASR, LLM e TTS e le chiavi API sono già nel `.env`.
+6. **Completa le Fasi 7 e 8** (compilazione e avvio automatico). Se usi l'interfaccia Videotex o
+   cyberpunk, ripeti anche la Fase 10. `install.sh` non chiederà una nuova password del pannello,
+   perché trova già quella copiata.
+
+Se ricevi avvisi di alimentazione insufficiente sul Pi 5 (ad esempio nel log `dmesg`), verifica la carica
+della batteria e consulta la documentazione PiSugar per il Pi 5: <https://docs.pisugar.com>.
 
 ---
 

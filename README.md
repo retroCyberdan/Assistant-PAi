@@ -1,7 +1,7 @@
 # Assistant-PAi
 My first attempato building a prototipe of AI Assistant!
 
-Hardware: Raspberry Pi 4 Model B + PiSugar Whisplay HAT + PiSugar 3 Plus 5000 mAh.
+Hardware: Raspberry Pi 4 Model B o Raspberry Pi 5 + PiSugar Whisplay HAT + PiSugar 3 Plus 5000 mAh.
 
 👉 **Guida completa passo passo (montaggio, installazione, configurazione): [GUIDA.md](GUIDA.md)**
 
