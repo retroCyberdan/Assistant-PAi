@@ -103,7 +103,8 @@ Lo script:
 1. salva l'interfaccia originale in `python/chatbot-ui.original.py`;
 2. copia i moduli Videotex in `whisplay-ai-chatbot/python/`;
 3. sostituisce `chatbot-ui.py` con un piccolo lanciatore che legge `UI_STYLE` dal file `.env`;
-4. riavvia `chatbot.service`, se esiste.
+4. riavvia `chatbot.service`, se esiste;
+5. installa e avvia il pannello web (servizio `pai-panel.service`, porta 8080).
 
 Non serve ricompilare (`build.sh`): l'interfaccia è solo Python e usa librerie già installate
 (Pillow e numpy).
@@ -114,6 +115,39 @@ Non serve ricompilare (`build.sh`): l'interfaccia è solo Python e usa librerie 
 
 **Per aggiornare il chatbot** (`git pull`): prima esegui `bash uninstall.sh`, poi `git pull` e
 `bash build.sh`, infine di nuovo `bash install.sh`.
+
+## Pannello web: cambiare logo e impostazioni dal telefono
+
+`install.sh` installa anche un **pannello web**. Lo apri dal browser di un telefono o di un PC
+collegato alla stessa rete Wi-Fi:
+
+```
+http://pai.local:8080        (o http://<indirizzo-IP-del-Raspberry>:8080)
+```
+
+Dal pannello puoi:
+- **caricare il logo** dalla galleria del telefono (PNG/JPG). Viene salvato in `~/pai-assets/logo.png`;
+- scegliere **stile** (cyberpunk / Videotex / originale), tema e colori;
+- cambiare **testi**: nome, frase di avvio, sigla, piè di pagina;
+- regolare gli **effetti**: glitch, CRT, animazione e suono di avvio, velocità di scrittura;
+- vedere l'**anteprima del display** con le modifiche, prima ancora di salvarle;
+- **salvare e riavviare l'assistente** con un pulsante, oppure riavviare il Raspberry;
+- cambiare la password del pannello.
+
+Sicurezza:
+- l'accesso è protetto da **password**, che lo script chiede durante l'installazione;
+- dopo 5 tentativi sbagliati l'accesso si blocca per un minuto;
+- i moduli sono protetti contro le richieste falsificate (CSRF);
+- il pannello modifica solo le voci `UI_STYLE` e `VTX_*` del file `.env`, senza toccare le chiavi API,
+  e prima di salvare fa una copia di sicurezza (`.env.bak`);
+- per riavviare usa un permesso `sudo` limitato a due soli comandi: riavviare `chatbot.service` e
+  riavviare il sistema.
+
+Il pannello usa HTTP semplice: va usato **solo sulla rete di casa**, senza esporlo su Internet.
+
+Per non installarlo: `bash install.sh --no-panel`.
+
+Password dimenticata? Dal Raspberry: `python3 ~/whisplay-ai-chatbot/python/vtx_panel.py --set-password`.
 
 ## Configurazione (file `~/whisplay-ai-chatbot/.env`)
 
@@ -169,6 +203,7 @@ batteria e immagini, e rimanda gli eventi del pulsante. Così il resto del chatb
 | `vtx_font.py` | font bitmap 5x7 originale con lettere accentate e katakana |
 | `vtx_cyber.py` / `cyber_ui.py` | stile pixel cyberpunk: pixel art, glitch, pagine HUD |
 | `preview.py` | anteprime PNG senza hardware |
+| `vtx_panel.py` / `snapshot.py` | pannello web e generatore di anteprime |
 | `install.sh` / `uninstall.sh` | installazione e ripristino |
 
 Limitazioni attuali: lo scorrimento è automatico (si vedono le ultime 10 righe) e la modalità

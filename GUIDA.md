@@ -253,6 +253,8 @@ Questa fase trasforma il display in un terminale Videotel / Minitel / Televideo 
 
 C'è anche uno stile **pixel cyberpunk** (`UI_STYLE=cyberpunk`) con avvio glitch del tuo logo e immagini ricostruite in pixel.
 
+Logo e impostazioni si cambiano poi dal telefono, con il **pannello web** `http://pai.local:8080`.
+
 Istruzioni complete in **[videotex/README.md](videotex/README.md)**. In breve:
 
 ```bash
