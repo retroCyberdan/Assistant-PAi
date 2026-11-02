@@ -36,6 +36,57 @@ continuano a funzionare come prima.
 | `minitel` | Minitel 1 (Francia, 1982) | monocromatico; i colori diventano livelli di grigio come sull'originale |
 | `televideo` | Televideo RAI / Teletext | fondo nero, 8 colori saturi, testata `P100` con ora e banda colorata |
 | `fosfori` | terminale a fosfori verdi | verde su nero |
+| `cyberpunk` | HUD pixel-art | vedi sotto |
+
+## Stile "pixel cyberpunk"
+
+Si attiva con `UI_STYLE=cyberpunk`, oppure con `VTX_THEME=cyberpunk`. È ispirato alle interfacce HUD
+pixel-art: pannelli a linee sottili con angoli "a mirino", font a pixel a tratto singolo in maiuscolo,
+tinte ciano/teal e immagini **ricostruite in pixel** con retinatura (dithering Bayer) su una rampa di
+6 tinte.
+
+![Cyberpunk](anteprime/cyberpunk.png)
+
+- **Avvio glitch con il tuo logo** (`VTX_LOGO_IMAGE`):
+  1. schermo di rumore statico;
+  2. il logo compare tra spostamenti di bande, separazione RGB magenta/ciano e sfarfallii, e si
+     stabilizza;
+  3. la frase `VTX_TAGLINE` si scrive sotto il logo;
+  4. scorre il log di sistema, con lo stato reale di rete e batteria;
+  5. un taglio glitch porta alla pagina iniziale.
+
+  Durante l'avvio viene riprodotto un suono di disturbi digitali.
+- **Pagina iniziale "tessera"** con dati reali del dispositivo: sigla `VTX_UNIT_ID`, logo in pixel,
+  modello AI e voce (da `LLM_SERVER` e `TTS_SERVER`), indirizzo IP, data e ora. Ci sono anche
+  decorazioni in katakana (アシスタント = "assistente") e un codice a barre.
+- **Dialogo a pannelli** `INPUT // UTENTE` e `OUTPUT`. Mentre l'assistente ascolta compaiono un
+  indicatore `REC` e un equalizzatore animato; la risposta si scrive in sincronia con la voce.
+- **Immagini generate** ricostruite in pixel, con una linea di scansione che le disegna dall'alto.
+- **Glitch casuali** a riposo (`VTX_GLITCH`) e glitch a ogni cambio di pagina.
+
+Avvio animato (anteprima generata dal codice):
+
+![Avvio](anteprime/cyberpunk-avvio.gif)
+
+```ini
+UI_STYLE=cyberpunk
+VTX_SERVICE_NAME=PAiTEL
+VTX_LOGO_IMAGE=/home/pi/logo.png   # il tuo logo (PNG/JPG; meglio ad alto contrasto, sfondo scuro)
+VTX_TAGLINE=SISTEMA NEURALE ONLINE
+VTX_UNIT_ID=PAi-01
+VTX_CYBER_PALETTE=teal             # teal | verde | ambra | viola
+VTX_GLITCH=0.5                     # 0 = mai, 1 = frequenti
+VTX_PIXEL=2                        # grandezza dei pixel delle immagini (1 = più dettaglio)
+VTX_UPPERCASE=1                    # tutto maiuscolo
+VTX_FOOTER_LINES=PROPRIETA' DI PAi SYSTEMS|UNITA' DI ASSISTENZA VOCALE
+VTX_HOME_TEXT=In attesa di comandi. Tieni premuto il tasto e parla.
+# VTX_KATAKANA=アシスタント          # disponibili: ア シ ス タ ン ト ネ ッ ー
+# VTX_BOOT=full | quick | off
+```
+
+Prova senza Raspberry, con il tuo logo:
+`VTX_LOGO_IMAGE=logo.png python3 preview.py out cyberpunk`
+(crea anche `cyberpunk-avvio.gif`).
 
 ## Installazione (sul Raspberry Pi)
 
@@ -67,7 +118,7 @@ Non serve ricompilare (`build.sh`): l'interfaccia è solo Python e usa librerie 
 ## Configurazione (file `~/whisplay-ai-chatbot/.env`)
 
 ```ini
-UI_STYLE=videotex           # videotex | original
+UI_STYLE=videotex           # videotex | cyberpunk | original
 VTX_THEME=videotel          # videotel | minitel | televideo | fosfori
 VTX_SERVICE_NAME=PAiTEL     # nome in testata
 VTX_LOGO_TEXT=PAi           # logo a mosaico generato dal testo (max ~6 caratteri)
@@ -115,7 +166,8 @@ batteria e immagini, e rimanda gli eventi del pulsante. Così il resto del chatb
 |---|---|
 | `videotex_ui.py` | server socket, pagine, sequenza di avvio, suono del modem |
 | `vtx_render.py` | griglia a caratteri, mosaico a sestanti, temi, effetto CRT |
-| `vtx_font.py` | font bitmap 5x7 originale con lettere accentate |
+| `vtx_font.py` | font bitmap 5x7 originale con lettere accentate e katakana |
+| `vtx_cyber.py` / `cyber_ui.py` | stile pixel cyberpunk: pixel art, glitch, pagine HUD |
 | `preview.py` | anteprime PNG senza hardware |
 | `install.sh` / `uninstall.sh` | installazione e ripristino |
 

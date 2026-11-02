@@ -6,7 +6,8 @@ JSON per riga) con il processo Node del chatbot, ma disegna le pagine sul
 display del Whisplay in stile Videotel / Minitel / Televideo.
 
 Configurazione tramite variabili d'ambiente (nel file .env del chatbot):
-  VTX_THEME          videotel | minitel | televideo | fosfori   (default videotel)
+  VTX_THEME          videotel | minitel | televideo | fosfori | cyberpunk (default videotel)
+                     (le opzioni dello stile cyberpunk sono descritte in vtx_cyber.py)
   VTX_SERVICE_NAME   nome del servizio in testata               (default PAiTEL)
   VTX_LOGO_TEXT      testo del logo a mosaico                   (default PAi)
   VTX_LOGO_IMAGE     percorso di un'immagine da usare come logo (PNG/JPG)
@@ -475,19 +476,25 @@ def modem_wav(path, dial):
     return t_dial_end, t_answer, t_connect
 
 
+def play_wav(path):
+    """Riproduce un file WAV in sottofondo (se VTX_MODEM_SOUND=1)."""
+    if not MODEM_SOUND:
+        return
+    cmd = ["aplay", "-q"]
+    dev = _find_audio_device()
+    if dev:
+        cmd += ["-D", dev]
+    cmd.append(path)
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError as e:
+        print(f"[Videotex] Impossibile riprodurre il suono di avvio: {e}")
+
+
 def play_modem_sound(dial):
     path = os.path.join("/tmp", "vtx_modem.wav")
     timing = modem_wav(path, dial)
-    if MODEM_SOUND:
-        cmd = ["aplay", "-q"]
-        dev = _find_audio_device()
-        if dev:
-            cmd += ["-D", dev]
-        cmd.append(path)
-        try:
-            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except OSError as e:
-            print(f"[Videotex] Impossibile riprodurre il suono del modem: {e}")
+    play_wav(path)
     return timing
 
 
@@ -830,7 +837,11 @@ def main():
     except Exception:
         pass
     state = State()
-    renderer = Renderer(whisplay, state)
+    if THEME_NAME == "cyberpunk":
+        from cyber_ui import CyberRenderer
+        renderer = CyberRenderer(whisplay, state)
+    else:
+        renderer = Renderer(whisplay, state)
     renderer.start()
     server = Server(whisplay, state, renderer)
 

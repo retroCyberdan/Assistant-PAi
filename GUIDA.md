@@ -251,6 +251,8 @@ Questa fase trasforma il display in un terminale Videotel / Minitel / Televideo 
 - la connessione via modem simulata all'avvio, con il suono;
 - un effetto CRT.
 
+C'è anche uno stile **pixel cyberpunk** (`UI_STYLE=cyberpunk`) con avvio glitch del tuo logo e immagini ricostruite in pixel.
+
 Istruzioni complete in **[videotex/README.md](videotex/README.md)**. In breve:
 
 ```bash

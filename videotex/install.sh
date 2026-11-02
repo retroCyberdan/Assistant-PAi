@@ -18,19 +18,22 @@ if [ ! -f "$PY/chatbot-ui.original.py" ]; then
 fi
 
 # 2. copia i moduli Videotex
-cp "$SRC/vtx_font.py" "$SRC/vtx_render.py" "$SRC/videotex_ui.py" "$PY/"
+cp "$SRC/vtx_font.py" "$SRC/vtx_render.py" "$SRC/videotex_ui.py" \
+   "$SRC/vtx_cyber.py" "$SRC/cyber_ui.py" "$PY/"
 
 # 3. lanciatore: sceglie l'interfaccia in base a UI_STYLE nel file .env
 cat > "$PY/chatbot-ui.py" <<'PYEOF'
 # Lanciatore installato da Assistant-PAi/videotex/install.sh
-# UI_STYLE=videotex (default) oppure UI_STYLE=original nel file .env
+# UI_STYLE=videotex (default) | cyberpunk | original nel file .env
 import os
 import runpy
 import sys
 
 here = os.path.dirname(os.path.abspath(__file__))
 style = os.getenv("UI_STYLE", "videotex").strip().lower()
-target = "videotex_ui.py" if style == "videotex" else "chatbot-ui.original.py"
+if style == "cyberpunk":
+    os.environ["VTX_THEME"] = "cyberpunk"
+target = "videotex_ui.py" if style in ("videotex", "cyberpunk") else "chatbot-ui.original.py"
 path = os.path.join(here, target)
 sys.argv[0] = path
 runpy.run_path(path, run_name="__main__")

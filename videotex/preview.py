@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-THEMES = ["videotel", "minitel", "televideo", "fosfori"]
+THEMES = ["videotel", "minitel", "televideo", "fosfori", "cyberpunk"]
 
 
 def run_theme(out_dir, theme):
@@ -36,7 +36,12 @@ def run_theme(out_dir, theme):
 
     wp = FakeWhisplay()
     st = ui.State()
-    r = ui.Renderer(wp, st)
+    if theme == "cyberpunk":
+        from cyber_ui import CyberRenderer
+        r = CyberRenderer(wp, st)
+        r.show = lambda img: None
+    else:
+        r = ui.Renderer(wp, st)
 
     def shot(name, settle=30.0):
         r.page_started = time.time() - settle
@@ -47,6 +52,9 @@ def run_theme(out_dir, theme):
         path = os.path.join(out_dir, f"{theme}-{name}.png")
         img.save(path)
         print(path)
+
+    if theme == "cyberpunk":
+        return run_cyber(out_dir, ui, r, wp, st)
 
     # pagina di connessione (avvio)
     sc = r.pages.boot_page([(2, "ATDT 165", ui.THEME["fg"]), (4, "Chiamata in corso", ui.THEME["dim"]),
@@ -65,6 +73,66 @@ def run_theme(out_dir, theme):
     shot("3-risposta")
     st.update({"status": "idle"})
     shot("4-fine")
+
+
+def run_cyber(out_dir, ui, r, wp, st):
+    """Anteprime dello stile cyberpunk + GIF animata dell'avvio con glitch."""
+    import time
+    from PIL import Image
+    frames = []
+    orig_draw = wp.draw_image
+
+    def capture(x, y, w, h, data):
+        orig_draw(x, y, w, h, data)
+        frames.append(wp.frame)
+
+    wp.draw_image = capture
+    os.environ["VTX_MODEM_SOUND"] = "0"
+    ui.MODEM_SOUND = False
+    st.update({"battery_level": 87, "network_connected": True})
+    r.running = True
+    r.boot()
+    gif = os.path.join(out_dir, "cyberpunk-avvio.gif")
+    step = max(1, len(frames) // 90)
+    sel = frames[::step]
+    sel[0].save(gif, save_all=True, append_images=sel[1:], duration=40 * step, loop=0)
+    print(gif)
+    wp.draw_image = orig_draw
+
+    def shot(name, settle=30.0, amount=None):
+        r.page_started = time.time() - settle
+        r.last_tick = time.time() - settle
+        r.glitch_until = 0
+        r.next_glitch = time.time() + 999
+        r.last_frame = None
+        if amount is None:
+            r.render_once()            # cambio pagina (attiva il taglio glitch)
+            r.glitch_until = 0
+            r.page_started = time.time() - settle
+            r.last_tick = time.time() - settle
+            r.last_frame = None
+            r.render_once()
+        else:
+            s = st.snapshot()
+            c, _ = r.page_home(s, time.time())
+            r.show_arr(c.a, amount)
+        path = os.path.join(out_dir, f"cyberpunk-{name}.png")
+        wp.frame.resize((480, 560), Image.NEAREST).save(path)
+        print(path)
+
+    st.update({"status": "idle", "text": "Long Press the button to say something."})
+    r.render_once()
+    shot("1-home")
+    shot("1b-glitch", amount=0.5)
+    st.update({"status": "listening", "text": "Listening..."})
+    shot("2-ascolto")
+    st.update({"status": "recognizing", "text": "Che tempo fa domani a Milano?"})
+    st.update({"status": "answering", "text": "Domani a Milano è previsto sole al mattino e qualche nuvola nel pomeriggio, con massime di 18 gradi."})
+    shot("3-risposta")
+    img = os.getenv("PREVIEW_IMAGE")
+    if img:
+        st.update({"image": img})
+        shot("4-immagine")
 
 
 if __name__ == "__main__":
