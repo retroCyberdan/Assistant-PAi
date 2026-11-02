@@ -6,3 +6,5 @@ Hardware: Raspberry Pi 4 Model B + PiSugar Whisplay HAT + PiSugar 3 Plus 5000 mA
 👉 **Guida completa passo passo (montaggio, installazione, configurazione): [GUIDA.md](GUIDA.md)**
 
 Esempio di configurazione in italiano: [config/env.esempio-italiano](config/env.esempio-italiano)
+
+🖥️ **Interfaccia retrò Videotel / Minitel / Televideo:** [videotex/README.md](videotex/README.md)

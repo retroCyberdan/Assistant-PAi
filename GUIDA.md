@@ -244,6 +244,22 @@ Tutte si attivano da `.env`; i dettagli sono nella [wiki ufficiale](https://gith
 
 ---
 
+## Fase 10 (opzionale): interfaccia Videotex retrò
+
+Questa fase trasforma il display in un terminale Videotel / Minitel / Televideo anni '80. Include:
+- un logo personalizzato a mosaico;
+- la connessione via modem simulata all'avvio, con il suono;
+- un effetto CRT.
+
+Istruzioni complete in **[videotex/README.md](videotex/README.md)**. In breve:
+
+```bash
+cd ~ && git clone -b claude/raspberry-pi-ai-assistant-vlgr75 https://github.com/retroCyberdan/Assistant-PAi.git
+bash ~/Assistant-PAi/videotex/install.sh
+```
+
+---
+
 ## Risoluzione dei problemi
 
 | Problema | Soluzione |
