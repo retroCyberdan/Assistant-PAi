@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Pannello web di Assistant-PAi.
+"""Pannello web di CYBERDECK.
 
 Permette dal browser (telefono o PC, sulla stessa rete) di:
   - caricare il logo e vedere l'anteprima del display;
-  - cambiare stile, colori, testi ed effetti dell'interfaccia (file .env);
-  - riavviare l'assistente o il Raspberry.
+  - cambiare nome, colori, testi ed effetti dell'interfaccia (file .env);
+  - riavviare l'assistente, riavviare o spegnere il Raspberry.
 
-Avvio:  python3 vtx_panel.py            (porta 8080, o PAI_PANEL_PORT)
-Password iniziale: python3 vtx_panel.py --set-password
+Avvio:              python3 deck_panel.py            (porta 8080, o DECK_PANEL_PORT)
+Password:           python3 deck_panel.py --set-password
+Pulizia del .env:   python3 deck_panel.py --migrate-env  (rimuove le vecchie voci VTX_*)
 """
 
 import argparse
@@ -32,52 +33,44 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOME = os.path.expanduser("~")
-APP_DIR = os.getenv("PAI_APP_DIR", os.path.join(HOME, "whisplay-ai-chatbot"))
+APP_DIR = os.getenv("DECK_APP_DIR", os.path.join(HOME, "whisplay-ai-chatbot"))
 ENV_PATH = os.path.join(APP_DIR, ".env")
-CONF_DIR = os.path.join(HOME, ".config", "pai-panel")
-CONF_PATH = os.path.join(CONF_DIR, "config.json")
-ASSETS_DIR = os.getenv("PAI_ASSETS_DIR", os.path.join(HOME, "pai-assets"))
-LOGO_PATH = os.path.join(ASSETS_DIR, "logo.png")
-PORT = int(os.getenv("PAI_PANEL_PORT", "8080"))
+CONF_DIR = os.getenv("DECK_CONF_DIR", os.path.join(HOME, ".config", "cyberdeck"))
+CONF_PATH = os.path.join(CONF_DIR, "panel.json")
+LOGO_PATH = os.path.join(CONF_DIR, "logo.png")
+PORT = int(os.getenv("DECK_PANEL_PORT", "8080"))
+ENV_SECTION = "# ---- CYBERDECK (pannello web) ----"
 MAX_UPLOAD = 10 * 1024 * 1024
 
 # ------------------------------------------------------------------ campi modificabili
 # (chiave, etichetta, tipo, opzioni, valore predefinito, aiuto, gruppo)
 FIELDS = [
-    ("UI_STYLE", "Stile interfaccia", "select",
-     [("cyberpunk", "Pixel cyberpunk"), ("videotex", "Videotex (Videotel / Minitel / Televideo)"),
-      ("original", "Originale PiSugar")], "videotex", "", "Stile"),
-    ("VTX_THEME", "Tema Videotex", "select",
-     [("videotel", "Videotel"), ("minitel", "Minitel"), ("televideo", "Televideo"),
-      ("fosfori", "Fosfori verdi")], "videotel", "Usato solo con lo stile Videotex.", "Stile"),
-    ("VTX_CYBER_PALETTE", "Colori cyberpunk", "select",
-     [("teal", "Teal"), ("verde", "Verde"), ("ambra", "Ambra"), ("viola", "Viola")], "teal",
-     "Usato solo con lo stile cyberpunk.", "Stile"),
-    ("VTX_SERVICE_NAME", "Nome in testata", "text", None, "PAiTEL", "", "Testi"),
-    ("VTX_LOGO_TEXT", "Logo testuale", "text", None, "PAi",
-     "Usato quando non c'è un logo caricato (max ~6 caratteri).", "Testi"),
-    ("VTX_TAGLINE", "Frase di avvio", "text", None, "SISTEMA NEURALE ONLINE",
-     "Cyberpunk: compare sotto il logo durante l'avvio.", "Testi"),
-    ("VTX_UNIT_ID", "Sigla unità", "text", None, "PAi-01", "Cyberpunk: sigla grande in home.", "Testi"),
-    ("VTX_HOME_TEXT", "Testo home (cyberpunk)", "text", None,
-     "In attesa di comandi. Tieni premuto il tasto e parla.", "", "Testi"),
-    ("VTX_HOME_LINES", "Righe home (Videotex)", "text", None, "Tieni premuto il|tasto e parla",
-     "Separa le righe con |", "Testi"),
-    ("VTX_FOOTER_LINES", "Piè di pagina (cyberpunk)", "text", None,
-     "PROPRIETA' DI PAi SYSTEMS|UNITA' DI ASSISTENZA VOCALE", "Due righe separate da |", "Testi"),
-    ("VTX_BOOT", "Animazione di avvio", "select",
-     [("full", "Completa"), ("quick", "Rapida"), ("off", "Nessuna")], "full", "", "Effetti"),
-    ("VTX_MODEM_SOUND", "Suono all'avvio", "bool", None, "1", "", "Effetti"),
-    ("VTX_GLITCH", "Intensità glitch", "range", (0, 1, 0.1), "0.5", "Cyberpunk: 0 = mai.", "Effetti"),
-    ("VTX_CRT", "Effetto monitor CRT", "range", (0, 1, 0.1), "0.7", "", "Effetti"),
-    ("VTX_PIXEL", "Grandezza pixel immagini", "select",
-     [("1", "1 (più dettaglio)"), ("2", "2"), ("3", "3 (più grossi)")], "2", "Cyberpunk.", "Effetti"),
-    ("VTX_UPPERCASE", "Testi in maiuscolo", "bool", None, "1", "Cyberpunk.", "Effetti"),
-    ("VTX_BAUD", "Velocità di scrittura", "select",
-     [("300", "300 baud (lentissimo)"), ("1200", "1200 baud (autentico)"), ("2400", "2400 baud"),
-      ("4800", "4800 baud (rapido)"), ("9600", "9600 baud")], "1200", "", "Effetti"),
-    ("VTX_IMAGE_MODE", "Immagini (Videotex)", "select",
-     [("mosaic", "Mosaico"), ("photo", "Foto")], "mosaic", "", "Effetti"),
+    ("UI_STYLE", "Interfaccia", "select",
+     [("cyberdeck", "CYBERDECK"), ("original", "Originale PiSugar")], "cyberdeck", "", "Stile"),
+    ("DECK_PALETTE", "Colori", "select",
+     [("verde", "Verde fosforo"), ("ambra", "Ambra"), ("ghiaccio", "Ghiaccio")], "verde", "", "Stile"),
+    ("DECK_NAME", "Nome", "text", None, "CYBERDECK Pi",
+     "In testata e nel logo: la prima parola in grande, il resto sotto in evidenza.", "Testi"),
+    ("DECK_HINT", "Testo della pagina iniziale", "text", None, "Tieni premuto il tasto e parla", "", "Testi"),
+    ("DECK_BOOT_LINES", "Righe di accensione", "text", None,
+     "The Simulation has been mapped.|The Archives are open.|Observer protocol initiated.",
+     "Tre righe sotto SYSTEM STATUS: ONLINE, separate da |", "Testi"),
+    ("DECK_ENTER_TEXT", "Prompt finale", "text", None, "[ ENTER TERMINAL ]", "", "Testi"),
+    ("DECK_SHUTDOWN_LINES", "Righe di spegnimento", "text", None,
+     "The Simulation has been archived.|The Archives are sealed.|Observer protocol terminated.",
+     "Tre righe sotto SYSTEM STATUS: OFFLINE, separate da |", "Testi"),
+    ("DECK_BOOT", "Animazione di accensione", "select",
+     [("full", "Completa (logo + terminale)"), ("quick", "Rapida (solo terminale)"), ("off", "Nessuna")],
+     "full", "", "Effetti"),
+    ("DECK_SHUTDOWN", "Animazione di spegnimento", "select",
+     [("full", "Completa (terminale + logo)"), ("quick", "Rapida (spegnimento CRT)"), ("off", "Nessuna")],
+     "full", "", "Effetti"),
+    ("DECK_SOUND", "Suoni di accensione e spegnimento", "bool", None, "1", "", "Effetti"),
+    ("DECK_GLITCH", "Glitch a riposo", "range", (0, 1, 0.1), "0.2", "0 = mai.", "Effetti"),
+    ("DECK_CRT", "Effetto monitor CRT", "range", (0, 1, 0.1), "0.7", "", "Effetti"),
+    ("DECK_TEXT_SPEED", "Velocità del testo", "select",
+     [("30", "Lenta"), ("60", "Normale"), ("120", "Veloce"), ("400", "Istantanea")], "60",
+     "Se la voce è attiva, il testo la segue comunque.", "Effetti"),
 ]
 FIELD_KEYS = [f[0] for f in FIELDS]
 VALUE_RE = re.compile(r"^[^\r\n\x00]{0,200}$")
@@ -165,8 +158,8 @@ def write_env(updates, path=ENV_PATH):
             out.append(line)
     missing = [k for k in updates if k not in done and updates[k] is not None]
     if missing:
-        if "# ---- Pannello PAi ----" not in out:
-            out += ["", "# ---- Pannello PAi ----"]
+        if ENV_SECTION not in out:
+            out += ["", ENV_SECTION]
         for k in missing:
             out.append("%s=%s" % (k, quote(updates[k])))
     tmp = path + ".tmp"
@@ -181,7 +174,7 @@ def current_settings():
     for key, _l, typ, _o, default, _h, _g in FIELDS:
         # i campi di testo non impostati restano vuoti (il predefinito appare come suggerimento)
         vals[key] = env.get(key, "" if typ == "text" else default)
-    vals["_logo"] = env.get("VTX_LOGO_IMAGE", "")
+    vals["_logo"] = env.get("DECK_LOGO_IMAGE", "")
     return vals
 
 
@@ -221,17 +214,12 @@ def make_preview(settings, logo_path=None):
             env.pop(k, None)
         else:
             env[k] = v
-    style = env.get("UI_STYLE", "videotex")
-    if style == "cyberpunk":
-        env["VTX_THEME"] = "cyberpunk"
-    elif env.get("VTX_THEME") == "cyberpunk":
-        env["VTX_THEME"] = "videotel"
-    if logo_path:
-        env["VTX_LOGO_IMAGE"] = logo_path
+    if logo_path is not None:
+        env["DECK_LOGO_IMAGE"] = logo_path
     fd, out = tempfile.mkstemp(suffix=".png")
     os.close(fd)
     try:
-        subprocess.run([sys.executable, os.path.join(HERE, "snapshot.py"), out], env=env,
+        subprocess.run([sys.executable, os.path.join(HERE, "deck_preview.py"), "snapshot", out], env=env,
                        cwd=HERE, timeout=40, check=True, capture_output=True)
         with open(out, "rb") as f:
             return f.read()
@@ -277,11 +265,33 @@ def restart_assistant():
                    "o manuale). Usa \"Riavvia Raspberry\".")
 
 
-def reboot_pi():
-    r = subprocess.run(["sudo", "-n", "systemctl", "reboot"], capture_output=True, text=True, timeout=15)
+def power(action):
+    """Riavvia ("reboot") o spegne ("poweroff") il Raspberry."""
+    r = subprocess.run(["sudo", "-n", "systemctl", action], capture_output=True, text=True, timeout=15)
     if r.returncode == 0:
-        return True, "Il Raspberry si sta riavviando..."
-    return False, "Riavvio non riuscito: " + (r.stderr.strip() or "permessi sudo mancanti")
+        return True, ("Il Raspberry si sta riavviando..." if action == "reboot"
+                      else "Il Raspberry si sta spegnendo: guarda il display!")
+    return False, "Comando non riuscito: " + (r.stderr.strip() or "permessi sudo mancanti")
+
+
+def migrate_env(path=ENV_PATH):
+    """Pulisce il .env dalle impostazioni delle vecchie interfacce (Videotex / cyberpunk)."""
+    env = parse_env(path)
+    updates = {k: None for k in env if k.startswith("VTX_")}
+    if env.get("UI_STYLE", "").lower() in ("videotex", "cyberpunk"):
+        updates["UI_STYLE"] = "cyberdeck"
+    if not updates:
+        return 0
+    write_env(updates, path)
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        lines = [ln for ln in lines if ln.strip() != "# ---- Pannello PAi ----"]
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines).rstrip("\n") + "\n")
+    except OSError:
+        pass
+    return len(updates)
 
 
 # ------------------------------------------------------------------ app Flask
@@ -317,40 +327,41 @@ def login_required(fn):
 app.jinja_env.globals["csrf_token"] = csrf_token
 
 CSS = """
-:root{--bg:#050d0f;--panel:#0b1d21;--line:#2c8086;--fg:#60c8c4;--hi:#baf8ee;--dim:#16464c;--alert:#ff5060}
+:root{--bg:#030906;--panel:#08130d;--line:#18342a;--edge:#24523a;--fg:#8af0a2;--hi:#d6ffe4;--dim:#4f8a63;--acc:#58ff80;--alert:#ff7060}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 "DejaVu Sans Mono",Menlo,Consolas,"Liberation Mono",monospace}
 header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
-header b{color:var(--hi);letter-spacing:2px}
+header b{color:var(--hi);letter-spacing:2px;font-weight:normal}
+.led{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--acc);margin-right:10px;box-shadow:0 0 8px var(--acc)}
 main{max-width:980px;margin:0 auto;padding:16px}
 .grid{display:grid;grid-template-columns:1fr;gap:16px}
 @media(min-width:860px){.grid{grid-template-columns:1fr 1fr}}
 @media(max-width:859px){.side{order:-1}.sticky{position:static}}
-section{background:var(--panel);border:1px solid var(--line);padding:14px;position:relative}
-section h2{margin:0 0 10px;font-size:12px;letter-spacing:2px;color:var(--line);text-transform:uppercase}
-label{display:block;margin:10px 0 4px;color:var(--hi);font-size:13px;text-transform:uppercase;letter-spacing:1px}
-small{color:#4f9a9a;display:block;margin-top:2px}
-input[type=text],input[type=password],select{width:100%;background:#03090a;color:var(--hi);border:1px solid var(--line);padding:9px;font:inherit;border-radius:0}
-input[type=range]{width:100%;accent-color:var(--fg)}
+section{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;position:relative}
+section h2{margin:0 0 10px;font-size:12px;letter-spacing:2px;color:var(--hi);text-transform:uppercase;font-weight:normal}
+label{display:block;margin:10px 0 4px;color:var(--fg);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+small{color:var(--dim);display:block;margin-top:2px}
+input[type=text],input[type=password],select{width:100%;background:#020604;color:var(--hi);border:1px solid var(--edge);border-radius:8px;padding:9px;font:inherit}
+input[type=range]{width:100%;accent-color:var(--acc)}
 input[type=file]{color:var(--fg);max-width:100%}
-.btn{display:inline-block;background:transparent;color:var(--hi);border:1px solid var(--fg);padding:10px 14px;font:inherit;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin:6px 6px 0 0}
-.btn.primary{background:var(--fg);color:#021012;font-weight:bold}
+.btn{display:inline-block;background:transparent;color:var(--hi);border:1px solid var(--fg);border-radius:8px;padding:10px 14px;font:inherit;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin:6px 6px 0 0}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#021008}
 .btn.warn{border-color:var(--alert);color:var(--alert)}
 .btn:disabled{opacity:.5}
-.preview{width:100%;image-rendering:auto;border:1px solid var(--line);background:#000;display:block}
-.msg{padding:10px;border:1px solid var(--fg);margin-bottom:14px;color:var(--hi)}
+.preview{width:100%;image-rendering:auto;border:1px solid var(--edge);border-radius:8px;background:#000;display:block}
+.msg{padding:10px;border:1px solid var(--fg);border-radius:8px;margin-bottom:14px;color:var(--hi)}
 .msg.err{border-color:var(--alert);color:var(--alert)}
-.logo{width:96px;height:96px;object-fit:contain;image-rendering:pixelated;border:1px solid var(--dim);background:#000;vertical-align:middle;margin-right:10px}
+.logo{width:96px;height:96px;object-fit:contain;border:1px solid var(--edge);border-radius:8px;background:#000;vertical-align:middle;margin-right:10px}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.check{display:flex;align-items:center;gap:8px;margin-top:12px;text-transform:uppercase;font-size:13px;color:var(--hi)}
+.check{display:flex;align-items:center;gap:8px;margin-top:12px;text-transform:uppercase;font-size:12px;color:var(--fg)}
 a{color:var(--hi)}
 .sticky{position:sticky;top:8px}
 """
 
 PAGE = """<!doctype html><html lang="it"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pannello PAi</title><style>{{ css }}</style></head><body>
-<header><b>PAi // PANNELLO</b>{% if auth %}<a href="{{ url_for('logout') }}">esci</a>{% endif %}</header>
+<title>CYBERDECK</title><style>{{ css }}</style></head><body>
+<header><b><span class="led"></span>CYBERDECK Pi // PANNELLO</b>{% if auth %}<a href="{{ url_for('logout') }}">esci</a>{% endif %}</header>
 <main>
 {% if msg %}<div class="msg {{ 'err' if err else '' }}">{{ msg }}</div>{% endif %}
 {% block body %}{% endblock %}
@@ -373,12 +384,12 @@ MAIN = PAGE.replace("{% block body %}{% endblock %}", """
 <h2>Logo</h2>
 <div class="row">
 {% if has_logo %}<img class="logo" src="{{ url_for('logo') }}?t={{ now }}" alt="logo attuale">{% endif %}
-<div>{% if has_logo %}Logo caricato{% else %}Nessun logo: viene usato il logo testuale{% endif %}</div>
+<div>{% if has_logo %}Logo caricato{% else %}Nessun logo: all'accensione compare il nome in grandi puntini{% endif %}</div>
 </div>
 <label>Carica nuovo logo (PNG / JPG)</label>
 <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif">
-<small>Meglio immagini ad alto contrasto su sfondo scuro. Verrà ricostruita in pixel.</small>
-{% if has_logo %}<label class="check"><input type="checkbox" name="remove_logo" value="1"> Rimuovi logo (usa il testo)</label>{% endif %}
+<small>Meglio immagini ad alto contrasto su sfondo scuro. Verrà ricostruita a puntini.</small>
+{% if has_logo %}<label class="check"><input type="checkbox" name="remove_logo" value="1"> Rimuovi logo (usa il nome)</label>{% endif %}
 </section>
 {% for group in groups %}
 <section style="margin-top:16px"><h2>{{ group }}</h2>
@@ -412,6 +423,7 @@ MAIN = PAGE.replace("{% block body %}{% endblock %}", """
 <button class="btn primary" type="submit" name="action" value="save_restart">Salva e riavvia assistente</button>
 <button class="btn" type="submit" name="action" value="save">Salva soltanto</button>
 <br><button class="btn warn" type="submit" name="action" value="reboot" formnovalidate onclick="return confirm('Riavviare il Raspberry?')">Riavvia Raspberry</button>
+<button class="btn warn" type="submit" name="action" value="poweroff" formnovalidate onclick="return confirm('Spegnere il Raspberry?')">Spegni Raspberry</button>
 <small>Le modifiche compaiono sul display dopo il riavvio dell'assistente.</small>
 </section>
 <section style="margin-top:16px">
@@ -502,17 +514,17 @@ def index():
 def save():
     check_csrf()
     action = request.form.get("action", "save")
-    if action == "reboot":
-        ok, text = reboot_pi()
+    if action in ("reboot", "poweroff"):
+        ok, text = power(action)
         flash_msg(text, not ok)
         return redirect(url_for("index"))
     updates = validate(request.form)
     f = request.files.get("logo")
     if f and f.filename:
         save_logo(f, LOGO_PATH)
-        updates["VTX_LOGO_IMAGE"] = LOGO_PATH
+        updates["DECK_LOGO_IMAGE"] = LOGO_PATH
     elif request.form.get("remove_logo") == "1":
-        updates["VTX_LOGO_IMAGE"] = None
+        updates["DECK_LOGO_IMAGE"] = None
     write_env(updates)
     if action == "save_restart":
         ok, text = restart_assistant()
@@ -545,7 +557,7 @@ def preview_live():
             os.close(fd)
             save_logo(f, logo_tmp)
         elif request.form.get("remove_logo") == "1":
-            settings["VTX_LOGO_IMAGE"] = ""
+            logo_tmp = ""
         png = make_preview(settings, logo_tmp)
     except subprocess.CalledProcessError as e:
         return Response("Errore: %s" % (e.stderr or b"").decode(errors="replace")[-400:],
@@ -562,7 +574,7 @@ def preview_live():
 @app.route("/logo.png")
 @login_required
 def logo():
-    path = parse_env().get("VTX_LOGO_IMAGE", "")
+    path = parse_env().get("DECK_LOGO_IMAGE", "")
     if not path or not os.path.exists(path):
         abort(404)
     return send_file(path, mimetype="image/png", max_age=0)
@@ -594,12 +606,17 @@ def client_error(e):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Pannello web di Assistant-PAi")
+    ap = argparse.ArgumentParser(description="Pannello web di CYBERDECK")
     ap.add_argument("--set-password", action="store_true", help="imposta la password del pannello")
+    ap.add_argument("--migrate-env", action="store_true", help="rimuove dal .env le voci delle vecchie interfacce")
     ap.add_argument("--password", help="password (non interattivo)")
     ap.add_argument("--host", default=os.getenv("PAI_PANEL_HOST", "0.0.0.0"))
     ap.add_argument("--port", type=int, default=PORT)
     args = ap.parse_args()
+    if args.migrate_env:
+        n = migrate_env()
+        print("File .env pulito (%d voci aggiornate)." % n if n else "File .env già in ordine.")
+        return
     if args.set_password:
         pw = args.password or os.getenv("PAI_PANEL_PASSWORD")
         while not pw:
@@ -612,10 +629,10 @@ def main():
         return
     conf = load_conf()
     if not conf.get("password_hash"):
-        print("Nessuna password impostata. Esegui: python3 vtx_panel.py --set-password")
+        print("Nessuna password impostata. Esegui: python3 deck_panel.py --set-password")
         sys.exit(1)
     app.secret_key = conf["secret_key"]
-    print(f"Pannello PAi su http://{args.host}:{args.port}  (file .env: {ENV_PATH})")
+    print(f"Pannello CYBERDECK su http://{args.host}:{args.port}  (file .env: {ENV_PATH})")
     from werkzeug.serving import run_simple
     run_simple(args.host, args.port, app, threaded=True)
 

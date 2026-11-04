@@ -7,4 +7,4 @@ Hardware: Raspberry Pi 4 Model B o Raspberry Pi 5 + PiSugar Whisplay HAT + PiSug
 
 Esempio di configurazione in italiano: [config/env.esempio-italiano](config/env.esempio-italiano)
 
-🖥️ **Interfaccia retrò Videotel / Minitel / Televideo / pixel cyberpunk:** [videotex/README.md](videotex/README.md)
+🖥️ **Interfaccia del display CYBERDECK** (dashboard dot-matrix animata + pannello web): [cyberdeck/README.md](cyberdeck/README.md)

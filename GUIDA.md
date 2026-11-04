@@ -267,23 +267,32 @@ Tutte si attivano da `.env`; i dettagli sono nella [wiki ufficiale](https://gith
 
 ---
 
-## Fase 10 (opzionale): interfaccia Videotex retrò
+## Fase 10 (opzionale): interfaccia CYBERDECK
 
-Questa fase trasforma il display in un terminale Videotel / Minitel / Televideo anni '80. Include:
-- un logo personalizzato a mosaico;
-- la connessione via modem simulata all'avvio, con il suono;
-- un effetto CRT.
+Questa fase trasforma il display in **CYBERDECK**, una dashboard a puntini (dot-matrix) con i colori
+verdi di un vecchio monitor a fosfori:
+- **animazioni che cambiano in base a cosa fa l'assistente:** onda mentre parli, anello che ruota mentre
+  elabora, barre che "parlano" mentre risponde, con passaggi fluidi tra una forma e l'altra;
+- **accensione e spegnimento animati:** logo con glitch, righe di codice che scorrono e
+  `SYSTEM STATUS: ONLINE` / `OFFLINE`;
+- **pannello web** `http://pai.local:8080` per cambiare logo, nome, colori e testi dal telefono.
 
-C'è anche uno stile **pixel cyberpunk** (`UI_STYLE=cyberpunk`) con avvio glitch del tuo logo e immagini ricostruite in pixel.
-
-Logo e impostazioni si cambiano poi dal telefono, con il **pannello web** `http://pai.local:8080`.
-
-Istruzioni complete in **[videotex/README.md](videotex/README.md)**. In breve:
+**Prima installazione:**
 
 ```bash
 cd ~ && git clone -b claude/raspberry-pi-ai-assistant-vlgr75 https://github.com/retroCyberdan/Assistant-PAi.git
-bash ~/Assistant-PAi/videotex/install.sh
+bash ~/Assistant-PAi/cyberdeck/install.sh
 ```
+
+**Aggiornamento** (anche se avevi installato le vecchie interfacce Videotex / cyberpunk: lo script le
+rimuove e ripulisce il `.env` da solo):
+
+```bash
+cd ~/Assistant-PAi && git pull
+bash cyberdeck/install.sh
+```
+
+Istruzioni complete in **[cyberdeck/README.md](cyberdeck/README.md)**.
 
 ---
 
@@ -297,8 +306,7 @@ La microSD del Pi 4 resta intatta come copia di sicurezza.
    ```bash
    mkdir -p backup-pai
    scp pi@pai.local:~/whisplay-ai-chatbot/.env backup-pai/
-   scp -r pi@pai.local:~/pai-assets backup-pai/          # il tuo logo
-   scp -r pi@pai.local:~/.config/pai-panel backup-pai/   # password del pannello web
+   scp -r pi@pai.local:~/.config/cyberdeck backup-pai/   # logo e password del pannello web
    ```
    Il file `.env` contiene le tue **chiavi API**: tienilo al sicuro e non caricarlo su GitHub.
 2. **Spegni e smonta** batteria e Whisplay dal Pi 4. Rimontali sul Pi 5 come nella Fase 1.
@@ -308,14 +316,12 @@ La microSD del Pi 4 resta intatta come copia di sicurezza.
 5. **Rimetti le tue impostazioni** sul Pi 5:
    ```bash
    scp backup-pai/.env pi@pai.local:~/whisplay-ai-chatbot/.env
-   scp -r backup-pai/pai-assets pi@pai.local:~/
    ssh pi@pai.local "mkdir -p ~/.config"
-   scp -r backup-pai/pai-panel pi@pai.local:~/.config/
+   scp -r backup-pai/cyberdeck pi@pai.local:~/.config/
    ```
    Non serve rifare la Fase 6: le scelte di ASR, LLM e TTS e le chiavi API sono già nel `.env`.
-6. **Completa le Fasi 7 e 8** (compilazione e avvio automatico). Se usi l'interfaccia Videotex o
-   cyberpunk, ripeti anche la Fase 10. `install.sh` non chiederà una nuova password del pannello,
-   perché trova già quella copiata.
+6. **Completa le Fasi 7 e 8** (compilazione e avvio automatico). Se usi CYBERDECK, ripeti anche la
+   Fase 10. `install.sh` non chiederà una nuova password del pannello, perché trova già quella copiata.
 
 Se ricevi avvisi di alimentazione insufficiente sul Pi 5 (ad esempio nel log `dmesg`), verifica la carica
 della batteria e consulta la documentazione PiSugar per il Pi 5: <https://docs.pisugar.com>.

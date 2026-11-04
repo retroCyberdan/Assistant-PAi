@@ -1,20 +1,13 @@
-"""Font bitmap 5x7 in stile terminale Videotex/Teletext.
+"""Font bitmap 5x7 del tema CYBERDECK (font originale scritto per questo progetto).
 
-Ogni glifo occupa una cella di 6x10 pixel:
-  - riga 0       : spaziatura superiore
-  - righe 1..7   : corpo del carattere (5x7)
-  - righe 8..9   : discendenti (g, j, p, q, y, virgola...)
-  - colonna 5    : spaziatura tra caratteri
+Ogni glifo è una griglia di 5 colonne per 7 righe (9 con i discendenti di g, j, p,
+q, y, virgola...). La stessa griglia viene disegnata in più modi da deck_gfx:
+pixel pieni, puntini (dot-matrix) o tratto sottile.
 
 I glifi sono scritti come righe di 5 caratteri ('#' = acceso, '.' = spento).
-Un glifo può avere 7 righe (senza discendenti) o 9 righe (con discendenti).
-Font originale scritto per questo progetto (nessun copyright di terzi).
 """
 
 import unicodedata
-
-CELL_W = 6
-CELL_H = 10
 
 _G = {
     " ": ".....|.....|.....|.....|.....|.....|.....",
@@ -134,27 +127,6 @@ _G = {
     "€": "..###|.#...|####.|.#...|####.|.#...|..###",
     "£": "..##.|.#..#|.#...|###..|.#...|.#..#|#.##.",
     "·": ".....|.....|.....|..#..|.....|.....|.....",
-    "«": ".....|..#.#|.#.#.|#.#..|.#.#.|..#.#|.....",
-    "»": ".....|#.#..|.#.#.|..#.#|.#.#.|#.#..|.....",
-    # Simboli tipici dei terminali Videotex
-    "←": ".....|..#..|.#...|#####|.#...|..#..|.....",
-    "→": ".....|..#..|...#.|#####|...#.|..#..|.....",
-    "↑": "..#..|.###.|#.#.#|..#..|..#..|..#..|..#..",
-    "↓": "..#..|..#..|..#..|..#..|#.#.#|.###.|..#..",
-    "█": "#####|#####|#####|#####|#####|#####|#####|#####|#####",
-    "▒": "#.#.#|.#.#.|#.#.#|.#.#.|#.#.#|.#.#.|#.#.#|.#.#.|#.#.#",
-    "♪": "..##.|..#.#|..#..|..#..|.##..|###..|.#...",
-    "♥": ".....|.#.#.|#####|#####|.###.|..#..|.....",
-    # Katakana decorativi (stile cyberpunk): ア シ ス タ ン ト ネ ッ ー
-    "ア": "#####|....#|..#.#|..##.|..#..|.#...|#....",
-    "シ": "##...|....#|##..#|....#|...#.|..#..|##...",
-    "ス": "#####|....#|...#.|..#..|.#.#.|#...#|.....",
-    "タ": ".#...|.####|#...#|.#.#.|..#..|.#...|#....",
-    "ン": "#....|.#..#|....#|....#|...#.|..#..|##...",
-    "ト": "..#..|..#..|..##.|..#.#|..#..|..#..|..#..",
-    "ネ": "..#..|#####|...#.|..#..|.###.|#.#.#|..#..",
-    "ッ": ".....|.....|#.#.#|#.#.#|....#|...#.|.##..",
-    "ー": ".....|.....|.....|#####|.....|.....|.....",
 }
 
 # Sostituzioni per caratteri tipografici comuni nelle risposte dell'AI
@@ -162,7 +134,7 @@ _SUBST = {
     "‘": "'", "’": "'", "“": '"', "”": '"',
     "–": "-", "—": "-", "…": "...", " ": " ",
     "•": "·", "×": "x", "−": "-", "\t": " ",
-    "→": "→", "←": "←",
+    "→": "->", "←": "<-", "«": '"', "»": '"',
 }
 
 
