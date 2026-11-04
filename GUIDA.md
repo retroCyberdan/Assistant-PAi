@@ -267,12 +267,15 @@ Tutte si attivano da `.env`; i dettagli sono nella [wiki ufficiale](https://gith
 
 ---
 
-## Fase 10 (opzionale): interfaccia CYBERDECK
+## Fase 10 (opzionale): interfaccia CYBERDECK ROCKY Pi
 
-Questa fase trasforma il display in **CYBERDECK**, una dashboard a puntini (dot-matrix) con i colori
-verdi di un vecchio monitor a fosfori:
-- **animazioni che cambiano in base a cosa fa l'assistente:** onda mentre parli, anello che ruota mentre
-  elabora, barre che "parlano" mentre risponde, con passaggi fluidi tra una forma e l'altra;
+Questa fase trasforma il display in **CYBERDECK ROCKY Pi v1.0** (サイバーデッキ ロッキー パイ), una dashboard
+a puntini (dot-matrix) con i colori verdi di un vecchio monitor a fosfori:
+- **Rocky**, un Jack Russell in pixel art, vive sullo schermo: mentre aspetta si siede, tira fuori la
+  lingua, fa un giro o schiaccia un pisolino; mentre l'assistente elabora scava, salta o si rotola;
+- **animazioni che cambiano in base a cosa fa l'assistente:** Rocky si scioglie in un'onda mentre
+  parli, e torna Rocky mentre elabora; poi barre che "parlano" mentre risponde, con passaggi fluidi;
+- **katakana** sotto il nome, sotto gli stati e accanto alle etichette;
 - **accensione e spegnimento animati:** logo con glitch, righe di codice che scorrono e
   `SYSTEM STATUS: ONLINE` / `OFFLINE`;
 - **pannello web** `http://pai.local:8080` per cambiare logo, nome, colori e testi dal telefono.

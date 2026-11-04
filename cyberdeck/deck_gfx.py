@@ -14,7 +14,7 @@ import os
 import numpy as np
 from PIL import Image, ImageFilter, ImageChops, ImageOps
 
-from deck_font import glyph, normalize_text
+from deck_font import glyph, is_kana, normalize_text
 
 W, H = 240, 280
 
@@ -74,9 +74,10 @@ _MASKS = {}
 
 def _src(ch):
     g = glyph(ch)
-    src = np.zeros((9, 5), dtype=bool)
+    w = 7 if is_kana(ch) else 5
+    src = np.zeros((9, w), dtype=bool)
     for r, row in enumerate(g[:9]):
-        for c, on in enumerate(row[:5]):
+        for c, on in enumerate(row[:w]):
             src[r, c] = on
     return src
 
@@ -87,32 +88,40 @@ def glyph_mask(ch, mode):
     if m is not None:
         return m
     s = _src(ch)
+    w = s.shape[1]
     if mode == "t":  # tratto sottile: punti a passo 2 uniti da linee di 1 px (cella 10x18)
-        m = np.zeros((18, 10), dtype=bool)
+        m = np.zeros((18, 2 * w + (2 if w > 5 else 0)), dtype=bool)
         for r in range(9):
-            for c in range(5):
+            for c in range(w):
                 if not s[r, c]:
                     continue
                 y, x = 2 * r, 2 * c
                 m[y, x] = True
-                if c + 1 < 5 and s[r, c + 1]:
+                if c + 1 < w and s[r, c + 1]:
                     m[y, x + 1] = True
                 if r + 1 < 9 and s[r + 1, c]:
                     m[y + 1, x] = True
-                if r + 1 < 9 and c + 1 < 5 and s[r + 1, c + 1] and not s[r, c + 1] and not s[r + 1, c]:
+                if r + 1 < 9 and c + 1 < w and s[r + 1, c + 1] and not s[r, c + 1] and not s[r + 1, c]:
                     m[y + 1, x + 1] = True
                 if r + 1 < 9 and c >= 1 and s[r + 1, c - 1] and not s[r, c - 1] and not s[r + 1, c]:
                     m[y + 1, x - 1] = True
     else:
         p, k = FONT_MODES[mode]
-        m = np.zeros((10 * p, 6 * p), dtype=bool)
+        m = np.zeros((10 * p, (w + 1) * p), dtype=bool)
         for r in range(9):
-            for c in range(5):
+            for c in range(w):
                 if s[r, c]:
                     y, x = (r + 1) * p, c * p
                     m[y:y + k, x:x + k] = True
     _MASKS[key] = m
     return m
+
+
+def advance(ch, mode):
+    """Larghezza in pixel di un carattere (i katakana sono più larghi delle lettere latine)."""
+    if is_kana(ch):
+        return 16 if mode == "t" else 8 * FONT_MODES[mode][0]
+    return cell_size(mode)[0]
 
 
 def cell_size(mode):
@@ -123,7 +132,7 @@ def cell_size(mode):
 
 
 def text_width(s, mode):
-    return len(s) * cell_size(mode)[0]
+    return sum(advance(c, mode) for c in s)
 
 
 # ------------------------------------------------------------------ canvas
@@ -176,6 +185,19 @@ class Canvas:
             return
         self.a[y0:y1, x0:x1][mask[y0 - y:y1 - y, x0 - x:x1 - x]] = col
 
+    def disc(self, cx, cy, r, col):
+        """Disco perfettamente rotondo, centrato in (cx, cy) con raggio r (anche frazionario)."""
+        key = ("disc", r)
+        m = _RR.get(key)
+        if m is None:
+            n = int(math.ceil(2 * r))
+            c = n / 2.0
+            yy, xx = np.mgrid[0:n, 0:n]
+            m = (xx + 0.5 - c) ** 2 + (yy + 0.5 - c) ** 2 <= r * r
+            _RR[key] = m
+        n = m.shape[0]
+        self._paint(int(round(cx - n / 2.0)), int(round(cy - n / 2.0)), m, col)
+
     def dot(self, x, y, col, size=2):
         x, y = int(round(x)) - size // 2, int(round(y)) - size // 2
         self.rect(x, y, size, size, col)
@@ -196,12 +218,13 @@ class Canvas:
             self.rect(cx, cy if dy > 0 else cy - n + 1, 1, n, col)
 
     def text(self, x, y, s, col, mode="s"):
-        cw, _ch = cell_size(mode)
-        x, y = int(x), int(y)
-        for i, c in enumerate(s):
+        x0 = x = int(x)
+        y = int(y)
+        for c in s:
             if c != " ":
-                self._paint(x + i * cw, y, glyph_mask(c, mode), col)
-        return len(s) * cw
+                self._paint(x, y, glyph_mask(c, mode), col)
+            x += advance(c, mode)
+        return x - x0
 
     def text_right(self, xr, y, s, col, mode="s"):
         self.text(xr - text_width(s, mode), y, s, col, mode)
@@ -283,7 +306,7 @@ def scramble(target, k, seed):
 # Ogni forma restituisce N posizioni (in pixel) e N colori. Cambiando forma le
 # particelle scivolano dalla vecchia alla nuova posizione: transizione fluida.
 
-N = 96
+N = 384
 
 
 def _box(box):
@@ -291,100 +314,53 @@ def _box(box):
     return x + w / 2.0, y + h / 2.0, w / 2.0, h / 2.0
 
 
-def _ring_angles(n, r, gap=5.0):
-    """Angoli per n particelle su un cerchio di raggio r, con puntini distanziati di ~gap px.
-
-    Se il cerchio è piccolo più particelle condividono lo stesso puntino: così i
-    puntini restano separati come nel riferimento e il morph resta fluido.
-    """
-    m = int(max(12, min(n, 2 * math.pi * r / gap)))
-    idx = np.floor(np.arange(n) * m / n)
-    return idx * 2 * math.pi / m
-
-
-def shape_face(t, box, p, blink=1.0):
-    """Cerchio puntinato con occhi e sorriso (stato "pronto")."""
-    cx, cy, hw, hh = _box(box)
-    r = min(hw, hh) * (0.92 + 0.02 * math.sin(t * 1.6))
-    pos = np.zeros((N, 2))
-    col = np.zeros((N, 3))
-    n_ring = 80
-    a = _ring_angles(n_ring, r) - math.pi / 2
-    pos[:n_ring, 0] = cx + np.cos(a) * r
-    pos[:n_ring, 1] = cy + np.sin(a) * r
-    col[:n_ring] = p["mid"]
-    # occhi (4 particelle): si chiudono quando blink -> 0
-    for i, ex in enumerate((-0.32, 0.32)):
-        for j, dy in enumerate((-0.06, 0.06)):
-            k = n_ring + i * 2 + j
-            pos[k] = (cx + ex * r, cy - 0.12 * r + dy * r * blink)
-            col[k] = p["acc"]
-    # sorriso (12 particelle)
-    xs = np.linspace(-0.3, 0.3, 12)
-    pos[n_ring + 4:, 0] = cx + xs * r
-    pos[n_ring + 4:, 1] = cy + (0.3 + 0.12 * (1 - (xs / 0.3) ** 2)) * r
-    col[n_ring + 4:] = p["dim"]
-    return pos, col
-
-
 def _noise(i, t, f=1.0):
     return (math.sin(i * 1.7 + t * 6.1 * f) * 0.5 + math.sin(i * 0.63 - t * 3.7 * f) * 0.3
             + math.sin(i * 2.9 + t * 9.3 * f) * 0.2)
 
 
-def shape_wave(t, box, p, level=1.0):
-    """Forma d'onda puntinata simmetrica (mentre si parla tenendo premuto il tasto)."""
+def shape_wave(t, box, p):
+    """Forma d'onda a barre verticali di puntini (mentre si parla tenendo premuto il tasto)."""
     cx, cy, hw, hh = _box(box)
-    cols = N // 2
+    cols = 48
+    per = N // cols
     pos = np.zeros((N, 2))
     col = np.zeros((N, 3))
+    hi, acc, mid = np.array(p["hi"], float), np.array(p["acc"], float), np.array(p["mid"], float)
     for j in range(cols):
         u = -1 + 2 * j / (cols - 1)
         env = max(0.0, 1 - abs(u) ** 1.6)
-        amp = env * (0.12 + 0.88 * abs(_noise(j, t))) * level
+        lvl = abs(_noise(j, t))
+        amp = env * (0.08 + 0.92 * lvl) * hh * 0.92
         x = cx + u * hw * 0.96
-        dy = amp * hh * 0.92
-        pos[2 * j] = (x, cy - dy)
-        pos[2 * j + 1] = (x, cy + dy)
-        c = mix(p["mid"], p["acc"], env ** 2 * (0.4 + 0.6 * abs(_noise(j, t))))
-        col[2 * j] = c
-        col[2 * j + 1] = c
-    return pos, col
-
-
-def shape_ring(t, box, p):
-    """Anello puntinato che ruota, con una "cometa" luminosa (elaborazione)."""
-    cx, cy, hw, hh = _box(box)
-    r = min(hw, hh) * 0.92
-    base = _ring_angles(N, r)
-    a = base - math.pi / 2 + t * 0.9
-    wob = 1 + 0.025 * np.sin(a * 3 + t * 4)
-    pos = np.stack([cx + np.cos(a) * r * wob, cy + np.sin(a) * r * wob], axis=1)
-    head = (t * 4.2) % (2 * math.pi)
-    rel = (head - base) % (2 * math.pi)
-    inten = np.exp(-rel * 1.6)
-    mid, acc = np.array(p["dim"], float), np.array(p["acc"], float)
-    col = mid[None, :] + (acc - mid)[None, :] * inten[:, None]
+        ys = cy + np.linspace(-amp, amp, per)
+        k = slice(j * per, (j + 1) * per)
+        pos[k, 0] = x
+        pos[k, 1] = ys
+        c = mid + (acc - mid) * (env ** 2 * (0.3 + 0.7 * lvl))
+        col[k] = c
+        # le punte delle barre più luminose
+        col[j * per] = col[(j + 1) * per - 1] = hi if lvl * env > 0.6 else c
     return pos, col
 
 
 def shape_spectrum(t, box, p):
     """Barre di puntini che "parlano" (risposta vocale)."""
     cx, cy, hw, hh = _box(box)
-    ncol, nrow = 16, N // 16
+    ncol, nrow = 16, 6
     pos = np.zeros((N, 2))
     col = np.zeros((N, 3))
-    for c in range(ncol):
+    for k in range(N):
+        c, r = (k // nrow) % ncol, k % nrow
         u = -1 + 2 * c / (ncol - 1)
         lvl = (0.35 + 0.65 * abs(_noise(c, t, 0.8))) * (1 - 0.35 * abs(u)) * nrow
-        for r in range(nrow):
-            k = c * nrow + r
-            pos[k] = (cx + u * hw * 0.92, cy + hh * 0.85 - r * (hh * 1.7 / (nrow - 1)))
-            if r < lvl:
-                col[k] = p["hi"] if r + 1 >= lvl else (p["acc"] if c >= ncol - 3 else p["fg"])
-            else:
-                col[k] = p["faint"]
-    return pos, col
+        pos[k] = (cx + u * hw * 0.92, cy + hh * 0.85 - r * (hh * 1.7 / (nrow - 1)))
+        if r < lvl:
+            col[k] = p["hi"] if r + 1 >= lvl else (p["acc"] if c >= ncol - 3 else p["fg"])
+        else:
+            col[k] = p["faint"]
+    order = np.argsort(pos[:, 0], kind="stable")
+    return pos[order], col[order]
 
 
 def shape_scatter(t, box, p):
@@ -392,22 +368,27 @@ def shape_scatter(t, box, p):
     cx, cy, hw, hh = _box(box)
     rng = np.random.default_rng(7)
     base = rng.uniform(-1, 1, size=(N, 2))
+    base = base[np.argsort(base[:, 0])]
     jit = np.stack([np.sin(t * 13 + np.arange(N)), np.cos(t * 11 + np.arange(N) * 1.3)], axis=1) * 0.04
     pos = np.stack([cx + (base[:, 0] + jit[:, 0]) * hw * 0.9, cy + (base[:, 1] + jit[:, 1]) * hh * 0.9], axis=1)
     col = np.tile(np.array(p["err"], float), (N, 1))
     return pos, col
 
 
-SHAPES = {"face": shape_face, "wave": shape_wave, "ring": shape_ring,
-          "spectrum": shape_spectrum, "scatter": shape_scatter}
+def shape_dog(t, box, p, dog=None):
+    """Rocky, il Jack Russell (vedi deck_dog)."""
+    return dog.points(t, box, p)
+
+
+SHAPES = {"wave": shape_wave, "spectrum": shape_spectrum, "scatter": shape_scatter, "dog": shape_dog}
 
 
 class Morph:
     """Gestisce il passaggio fluido tra una forma e l'altra."""
 
-    DURATION = 0.75
+    DURATION = 0.8
 
-    def __init__(self, shape="face"):
+    def __init__(self, shape="dog"):
         self.cur = shape
         self.prev = shape
         self.t0 = -10.0
@@ -419,18 +400,28 @@ class Morph:
     def active(self, now):
         return now - self.t0 < self.DURATION + 0.3
 
+    def weight(self, now, shape):
+        """Quanto la forma indicata è "presente" (0..1): utile per far comparire gli accessori."""
+        k = ease((now - self.t0) / self.DURATION)
+        if self.cur == shape and self.prev == shape:
+            return 1.0
+        if self.cur == shape:
+            return k
+        if self.prev == shape:
+            return 1 - k
+        return 0.0
+
     def points(self, now, box, p, **kw):
         pos_b, col_b = SHAPES[self.cur](now, box, p, **kw.get(self.cur, {}))
         k = (now - self.t0) / self.DURATION
-        if k >= 1.3:
+        if k >= 1.3 or self.prev == self.cur:
             return pos_b, col_b
         pos_a, col_a = SHAPES[self.prev](now, box, p, **kw.get(self.prev, {}))
-        # ritardo progressivo per particella: la forma "scorre" invece di saltare
+        # ritardo progressivo per particella (da sinistra a destra): la forma "scorre"
         delay = np.linspace(0, 0.3, N)
         kk = np.clip((k - delay) / 0.7, 0, 1)
         e = kk * kk * (3 - 2 * kk)
-        # piccolo arco durante il viaggio, per un movimento più organico
-        lift = np.sin(e * math.pi) * 6
+        lift = np.sin(e * math.pi) * 5
         pos = pos_a + (pos_b - pos_a) * e[:, None]
         pos[:, 1] -= lift
         col = col_a + (col_b - col_a) * e[:, None]
@@ -438,8 +429,15 @@ class Morph:
 
     @staticmethod
     def draw(cv, pos, col, size=2):
-        for (x, y), c in zip(pos, col):
-            cv.dot(x, y, (int(c[0]), int(c[1]), int(c[2])), size)
+        """Disegna i puntini (vettoriale: veloce anche con centinaia di puntini)."""
+        xs = np.floor(pos[:, 0] + 0.5).astype(int) - size // 2   # arrotondamento uniforme
+        ys = np.floor(pos[:, 1] + 0.5).astype(int) - size // 2
+        c = np.clip(col, 0, 255).astype(np.uint8)
+        for dy in range(size):
+            for dx in range(size):
+                x, y = xs + dx, ys + dy
+                ok = (x >= 0) & (x < cv.w) & (y >= 0) & (y < cv.h)
+                cv.a[y[ok], x[ok]] = c[ok]
 
 
 # ------------------------------------------------------------------ immagini a puntini

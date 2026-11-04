@@ -9,7 +9,7 @@ if [ "$1" = "--no-panel" ]; then PANEL=0; shift; fi
 APP="${1:-$HOME/whisplay-ai-chatbot}"
 PY="$APP/python"
 CONF="$HOME/.config/cyberdeck"
-FILES="deck_font.py deck_gfx.py deck_ui.py deck_panel.py deck_preview.py"
+FILES="deck_font.py deck_gfx.py deck_dog.py deck_ui.py deck_panel.py deck_preview.py"
 
 if [ "$(id -u)" = "0" ]; then
   echo "Esegui lo script come utente normale (senza sudo): i permessi li chiede da solo."
@@ -20,7 +20,7 @@ if [ ! -f "$PY/chatbot-ui.py" ] && [ ! -f "$PY/chatbot-ui.original.py" ]; then
   exit 1
 fi
 
-echo "== CYBERDECK =="
+echo "== CYBERDECK ROCKY Pi v1.0 =="
 
 # 1. conserva l'interfaccia originale (una sola volta)
 if [ ! -f "$PY/chatbot-ui.original.py" ]; then
@@ -70,7 +70,7 @@ if [ -f "$APP/.env" ]; then
   DECK_APP_DIR="$APP" python3 "$PY/deck_panel.py" --migrate-env 2>/dev/null \
     || echo "(Pulizia del .env saltata: Flask non ancora installato)"
 fi
-echo "Interfaccia CYBERDECK installata."
+echo "Interfaccia CYBERDECK ROCKY Pi installata."
 
 # 6. pannello web
 if [ "$PANEL" = "1" ]; then

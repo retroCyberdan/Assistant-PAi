@@ -1,37 +1,76 @@
-# CYBERDECK
+# CYBERDECK ROCKY Pi v1.0
 
-L'interfaccia del display **PiSugar Whisplay** di Assistant-PAi: una dashboard **dot-matrix**
-minimal a card, con i colori verdi di un vecchio monitor a fosfori.
+サイバーデッキ ロッキー パイ — L'interfaccia del display **PiSugar Whisplay** di Assistant-PAi:
+una dashboard **dot-matrix** minimal a card, con i colori verdi di un vecchio monitor a fosfori.
+Il progetto è dedicato a **Rocky**, il Jack Russell che vive sullo schermo.
 Sostituisce solo la grafica del [whisplay-ai-chatbot](https://github.com/PiSugar/whisplay-ai-chatbot):
 voce, AI, pulsante e batteria funzionano come prima.
 
 ![CYBERDECK](anteprime/cyberdeck.png)
 
-*Da sinistra: logo all'accensione, terminale di avvio, pronto, in ascolto, elaborazione, risposta,
-spegnimento. Le immagini sono generate dal codice con `deck_preview.py`.*
+*Logo all'accensione, terminale di avvio, Rocky in attesa, in ascolto, Rocky che si dà da fare
+mentre l'assistente elabora, risposta, un'altra elaborazione, spegnimento. Le immagini sono generate
+dal codice con `deck_preview.py`.*
 
 ![Demo animata](anteprime/cyberdeck-demo.gif)
 
 ## Cosa fa
 
+### Rocky, il Jack Russell
+Rocky è disegnato in pixel art, a puntini, con i tratti del Jack Russell:
+- corpo bianco;
+- macchie marroni su orecchie, occhi e dorso;
+- orecchio piegato in avanti e coda corta e dritta;
+- collare verde.
+
+**Mentre aspetta un comando** Rocky scodinzola, respira e sbatte gli occhi. Ogni pochi secondi fa
+a caso una di queste cose, senza ripetere la stessa due volte di fila:
+- **si siede**, apre la bocca e **tira fuori la lingua** ansimando, poi la richiude e si rialza;
+- **fa un giro:** si gira a sinistra, cammina, si ferma, si rigira e torna al suo posto;
+- **schiaccia un pisolino:** si sdraia, chiude gli occhi (escono le "z"), sbatte gli occhi e si rialza.
+
+**Mentre l'assistente elabora** la tua richiesta, Rocky si dà da fare. A ogni pressione del tasto
+sceglie a caso un'attività diversa dalla volta precedente:
+- **scava:** la terra vola dietro di lui e si accumula in un mucchietto;
+- **salta:** si abbassa, salta con le zampe distese e atterra ammortizzando, con l'ombra sul
+  pavimento che si stringe;
+- **si rotola a pancia in su** e si struscia la schiena agitando le zampe.
+
+![Rocky](anteprime/rocky.gif)
+
+*Le sei animazioni di Rocky: seduto con la lingua di fuori, giro, pisolino (a riposo); scavo,
+salto, rotolata (mentre l'assistente elabora).*
+
 ### Animazioni che seguono l'assistente
-La card **01 AGENT STATUS** mostra una forma fatta di puntini che cambia in base a cosa sta facendo
-l'assistente:
+La card **01 AGENT STATUS** mostra il titolo dello stato, la sua traduzione in **katakana** e
+un'animazione:
 
-| Stato | Titolo | Animazione |
-|---|---|---|
-| pronto | `READY` | faccina puntinata che "respira" e ogni tanto sbatte gli occhi |
-| tieni premuto il tasto e parli | `LISTENING` | forma d'onda animata, con `● REC` che lampeggia |
-| trascrizione / elaborazione | `DECODING...` / `THINKING...` | anello puntinato che ruota, con una "cometa" luminosa |
-| risposta a voce | `SPEAKING` | barre di puntini che "parlano" |
-| errore | `ERROR` | puntini dispersi che tremolano |
+| Stato | Titolo | Katakana | Animazione |
+|---|---|---|---|
+| pronto | `READY` | レディ | Rocky in attesa (vedi sopra) |
+| tieni premuto il tasto e parli | `LISTENING` | リスニング | forma d'onda a barre di puntini, `● REC` lampeggia |
+| trascrizione / elaborazione | `DECODING...` / `THINKING...` | デコード / シンキング | Rocky scava, salta o si rotola |
+| risposta a voce | `SPEAKING` | スピーキング | barre di puntini che "parlano" |
+| errore | `ERROR` | エラー | puntini dispersi che tremolano |
 
-Le forme sono fatte degli **stessi 96 puntini**: a ogni cambio di stato i puntini **scivolano**
-dalla vecchia forma alla nuova. Così l'onda si trasforma in anello e l'anello nelle barre in modo
-fluido. Anche il resto della pagina cambia senza scatti:
+Rocky, l'onda e le barre sono fatti degli **stessi 384 puntini**, che **scivolano** da una forma
+all'altra. Così Rocky si scioglie nell'onda quando premi il tasto, e l'onda torna Rocky quando
+lo rilasci. Anche tra una posa e l'altra di Rocky i puntini scorrono, quindi non ci sono scatti.
+Il resto della pagina cambia allo stesso modo:
 - il titolo si "decodifica" lettera per lettera;
-- le card si allargano o si restringono con un movimento morbido. Durante la risposta la card del
-  testo si ingrandisce.
+- le card si allargano e si restringono con un movimento morbido;
+- Rocky si ridimensiona con loro.
+
+Da fermi, Rocky e i suoi puntini stanno su una griglia regolare di passo intero. I pallini
+(stato, `REC`, `SYSTEM STATUS`) sono dischi perfettamente rotondi.
+
+### Katakana
+Il nome ha la sua traduzione **サイバーデッキ ロッキー パイ** sotto il logo. I katakana compaiono anche:
+- sotto ogni stato;
+- accanto alle etichette delle card (ジョウタイ, インプット, アウトプット, ターミナル...);
+- nel terminale di avvio (システム ステータス: オンライン).
+
+Il font katakana è disegnato a mano a puntini, come il resto.
 
 ### Card 02: il terminale
 Mostra:
@@ -42,10 +81,11 @@ Mostra:
 Le immagini generate dall'AI vengono ricostruite a puntini in una card **03 VISION**.
 
 ### Accensione
-1. Glitch iniziale, poi il logo **CYBERDECK Pi** (o il tuo logo) compare tra i disturbi e sparisce
-   con un altro glitch.
+1. Glitch iniziale, poi il logo **CYBERDECK ROCKY Pi** con katakana e versione (o il tuo logo)
+   compare tra i disturbi e sparisce con un altro glitch.
 2. Righe di codice che scorrono, con dati veri: kernel, rete, batteria, servizi AI.
-3. `● SYSTEM STATUS:` / **`ONLINE.`** / tre righe di testo / `[ ENTER TERMINAL ] █`.
+3. `● SYSTEM STATUS:` / **`ONLINE.`** / `システム ステータス: オンライン` / tre righe di testo /
+   `[ ENTER TERMINAL ] █`.
 4. Un taglio glitch porta alla dashboard, che si accende dall'alto come un tubo catodico.
 
 ### Spegnimento
@@ -101,7 +141,8 @@ Dal browser di un telefono o di un PC sulla stessa rete Wi-Fi: **`http://pai.loc
 Dal pannello puoi:
 - **caricare il tuo logo** (PNG/JPG). Viene ricostruito a puntini e mostrato all'accensione e allo
   spegnimento al posto della scritta;
-- cambiare **nome** (es. `CYBERDECK Pi`: la prima parola va in grande, il resto sotto in evidenza);
+- cambiare **nome** (es. `CYBERDECK ROCKY Pi`: la prima parola va in grande, il resto sotto in
+  evidenza) e la sua **traduzione in katakana**;
 - scegliere i **colori**: verde fosforo, ambra o ghiaccio;
 - modificare i **testi**: frase della pagina iniziale, righe di accensione e spegnimento, prompt finale;
 - regolare gli **effetti**: animazioni di accensione e spegnimento (completa / rapida / nessuna), suoni,
@@ -127,7 +168,8 @@ Si cambiano dal pannello web; a mano funzionano così:
 
 ```ini
 UI_STYLE=cyberdeck
-DECK_NAME=CYBERDECK Pi
+DECK_NAME=CYBERDECK ROCKY Pi
+DECK_NAME_KANA=サイバーデッキ ロッキー パイ
 DECK_PALETTE=verde
 DECK_HINT=Tieni premuto il tasto e parla
 DECK_BOOT=full
@@ -179,8 +221,9 @@ intercetta, mostra l'animazione di spegnimento e poi esce.
 | File | Contenuto |
 |---|---|
 | `deck_ui.py` | protocollo socket, dashboard, transizioni, accensione e spegnimento, suoni |
+| `deck_dog.py` | Rocky: sprite pixel art, pose, animazioni a riposo e durante l'elaborazione |
 | `deck_gfx.py` | font dot-matrix, card, forme a puntini e morph, immagini a puntini, glitch, CRT |
-| `deck_font.py` | font bitmap 5x7 originale con lettere accentate italiane |
+| `deck_font.py` | font bitmap originale: lettere latine 5x7 con accenti italiani e katakana 7x7 |
 | `deck_panel.py` | pannello web (Flask) |
 | `deck_preview.py` | anteprime e demo animata senza hardware |
 | `install.sh` / `uninstall.sh` | installazione, migrazione dalle versioni precedenti, ripristino |

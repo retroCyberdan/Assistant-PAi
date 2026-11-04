@@ -43,14 +43,22 @@ ENV_SECTION = "# ---- CYBERDECK (pannello web) ----"
 MAX_UPLOAD = 10 * 1024 * 1024
 
 # ------------------------------------------------------------------ campi modificabili
+sys.path.insert(0, HERE)
+try:
+    from deck_font import KANA
+    KANA_HELP = " ".join(sorted(KANA))
+except Exception:  # il pannello funziona anche senza il font
+    KANA_HELP = "katakana"
 # (chiave, etichetta, tipo, opzioni, valore predefinito, aiuto, gruppo)
 FIELDS = [
     ("UI_STYLE", "Interfaccia", "select",
      [("cyberdeck", "CYBERDECK"), ("original", "Originale PiSugar")], "cyberdeck", "", "Stile"),
     ("DECK_PALETTE", "Colori", "select",
      [("verde", "Verde fosforo"), ("ambra", "Ambra"), ("ghiaccio", "Ghiaccio")], "verde", "", "Stile"),
-    ("DECK_NAME", "Nome", "text", None, "CYBERDECK Pi",
+    ("DECK_NAME", "Nome", "text", None, "CYBERDECK ROCKY Pi",
      "In testata e nel logo: la prima parola in grande, il resto sotto in evidenza.", "Testi"),
+    ("DECK_NAME_KANA", "Nome in katakana", "text", None, "サイバーデッキ ロッキー パイ",
+     "Sotto il logo. Caratteri disponibili: " + KANA_HELP, "Testi"),
     ("DECK_HINT", "Testo della pagina iniziale", "text", None, "Tieni premuto il tasto e parla", "", "Testi"),
     ("DECK_BOOT_LINES", "Righe di accensione", "text", None,
      "The Simulation has been mapped.|The Archives are open.|Observer protocol initiated.",
@@ -360,8 +368,8 @@ a{color:var(--hi)}
 
 PAGE = """<!doctype html><html lang="it"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CYBERDECK</title><style>{{ css }}</style></head><body>
-<header><b><span class="led"></span>CYBERDECK Pi // PANNELLO</b>{% if auth %}<a href="{{ url_for('logout') }}">esci</a>{% endif %}</header>
+<title>CYBERDECK ROCKY Pi</title><style>{{ css }}</style></head><body>
+<header><b><span class="led"></span>CYBERDECK ROCKY Pi v1.0 // PANNELLO</b>{% if auth %}<a href="{{ url_for('logout') }}">esci</a>{% endif %}</header>
 <main>
 {% if msg %}<div class="msg {{ 'err' if err else '' }}">{{ msg }}</div>{% endif %}
 {% block body %}{% endblock %}

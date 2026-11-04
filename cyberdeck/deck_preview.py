@@ -83,14 +83,22 @@ def demo(out_dir):
     marks = {"boot_end": time.time()}
     script = [
         (0.0, {"status": "idle", "text": "Long Press the button to say something."}),
-        (2.5, {"status": "listening", "text": "Listening..."}),
-        (5.0, {"status": "recognizing", "text": "Che tempo fa domani a Milano?"}),
-        (6.2, {"status": "answering...", "text": ""}),
-        (8.0, {"status": "answering", "text": "Domani a Milano è previsto sole al mattino e qualche "
-                                               "nuvola nel pomeriggio, con massime di 18 gradi."}),
-        (8.1, {"scroll_sync": {"char_end": 60, "duration_ms": 2500}}),
-        (10.5, {"scroll_sync": {"char_end": 200, "duration_ms": 2500}}),
-        (13.0, {"status": "idle"}),
+        # prima pressione del tasto
+        (9.0, {"status": "listening", "text": "Listening..."}),
+        (11.5, {"status": "recognizing", "text": "Che tempo fa domani a Milano?"}),
+        (12.5, {"status": "answering...", "text": ""}),
+        (15.0, {"status": "answering", "text": "Domani a Milano è previsto sole al mattino e qualche "
+                                                "nuvola nel pomeriggio, con massime di 18 gradi."}),
+        (15.1, {"scroll_sync": {"char_end": 60, "duration_ms": 2500}}),
+        (17.5, {"scroll_sync": {"char_end": 200, "duration_ms": 2500}}),
+        (20.0, {"status": "idle"}),
+        # seconda pressione: Rocky fa qualcos'altro
+        (22.0, {"status": "listening", "text": "Listening..."}),
+        (24.0, {"status": "recognizing", "text": "Raccontami una curiosità sui cani"}),
+        (25.0, {"status": "answering...", "text": ""}),
+        (28.0, {"status": "answering", "text": "I Jack Russell sono stati selezionati in Inghilterra "
+                                                "per la caccia alla volpe: instancabili e curiosi!"}),
+        (32.0, {"status": "idle"}),
     ]
     t0 = time.time()
     for at, msg in script:
@@ -99,7 +107,7 @@ def demo(out_dir):
         st.update(msg)
         r.wake()
         marks.setdefault(msg.get("status", "sync") + "_%d" % int(at * 10), time.time())
-    time.sleep(2.5)
+    time.sleep(3.0)
     marks["shutdown"] = time.time()
     threading.Thread(target=r.request_shutdown, daemon=True).start()
     r.done.wait(20)
@@ -123,11 +131,11 @@ def demo(out_dir):
         cand = [f for t, f in frames if t_a <= t <= t_b] or [at(t_a)]
         return max(cand, key=lambda f: (np.asarray(f).max(axis=2) > 120).sum())
 
+    b = marks["boot_end"]
     stills = {
-        "1-logo": t_boot + 1.9, "2-terminale": marks["boot_end"] - 0.6,
-        "3-pronto": marks["boot_end"] + 2.0, "4-ascolto": marks["boot_end"] + 4.5,
-        "5-elaborazione": marks["boot_end"] + 7.5, "6-risposta": marks["boot_end"] + 12.5,
-        "7-spegnimento": marks["shutdown"] + 3.6,
+        "1-logo": t_boot + 1.9, "2-terminale": b - 0.6, "3-pronto": b + 1.5,
+        "4-ascolto": b + 10.5, "5-elaborazione": b + 14.0, "6-risposta": b + 19.5,
+        "7-elaborazione2": b + 27.0, "8-spegnimento": marks["shutdown"] + 3.6,
     }
     for name, t in stills.items():
         p = os.path.join(out_dir, "cyberdeck-%s.png" % name)

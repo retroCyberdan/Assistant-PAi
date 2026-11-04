@@ -5,18 +5,20 @@ Sostituisce `chatbot-ui.py`: parla lo stesso protocollo socket del chatbot
 (TCP 12345, un messaggio JSON per riga) e disegna una dashboard dot-matrix
 con animazioni che cambiano in base a cosa sta facendo l'assistente:
 
-  pronto       -> faccina puntinata che respira e sbatte gli occhi
+  pronto       -> Rocky, il Jack Russell a puntini, che aspetta: scodinzola,
+                  si siede e ansima, fa un giro, schiaccia un pisolino...
   in ascolto   -> forma d'onda animata (mentre tieni premuto il tasto)
-  elaborazione -> anello puntinato che ruota
+  elaborazione -> Rocky si dà da fare: scava, salta o si rotola (a caso)
   risposta     -> barre di puntini che "parlano" + testo scritto in tempo reale
   errore       -> particelle disperse
 
-Le forme sono fatte delle stesse particelle, che scivolano da una forma
-all'altra: ogni passaggio è fluido. All'accensione e allo spegnimento viene
-mostrata una sequenza glitch con il logo e il terminale "SYSTEM STATUS".
+Le forme sono fatte degli stessi puntini, che scivolano da una forma all'altra:
+ogni passaggio è fluido. All'accensione e allo spegnimento viene mostrata una
+sequenza glitch con il logo e il terminale "SYSTEM STATUS".
 
 Impostazioni (file .env del chatbot, modificabili dal pannello web):
-  DECK_NAME            nome mostrato in testata e nel logo   (CYBERDECK Pi)
+  DECK_NAME            nome mostrato in testata e nel logo   (CYBERDECK ROCKY Pi)
+  DECK_NAME_KANA       il nome in katakana, sotto il logo    (サイバーデッキ ロッキー パイ)
   DECK_PALETTE         verde | ambra | ghiaccio                (verde)
   DECK_LOGO_IMAGE      immagine da usare come logo (opzionale)
   DECK_HINT            testo della pagina iniziale
@@ -51,6 +53,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 import deck_gfx as gfx  # noqa: E402
+from deck_dog import Dog  # noqa: E402
 from deck_gfx import Canvas, Morph, W, H, mix, ease  # noqa: E402
 
 # ------------------------------------------------------------------ impostazioni
@@ -68,7 +71,9 @@ def _num(name, default, lo, hi):
         return float(default)
 
 
-NAME = _env("DECK_NAME", "CYBERDECK Pi")
+NAME = _env("DECK_NAME", "CYBERDECK ROCKY Pi")
+NAME_KANA = gfx.prep(_env("DECK_NAME_KANA", "サイバーデッキ ロッキー パイ"))  # scarta i caratteri non disegnati
+VERSION = "v1.0"
 PAL = gfx.palette(_env("DECK_PALETTE", "verde"))
 LOGO_IMAGE = _env("DECK_LOGO_IMAGE", "")
 HINT = _env("DECK_HINT", "Tieni premuto il tasto e parla")
@@ -92,27 +97,29 @@ HOME_TIMEOUT = _num("DECK_HOME_TIMEOUT", 90, 0, 86400)
 CARD_X, CARD_W = 4, 232
 TOP = 22                 # inizio della card "agente"
 BOTTOM = 276             # fine della card "terminale"
-SPLIT_BIG, SPLIT_COMPACT = 190, 112
+SPLIT_BIG, SPLIT_COMPACT = 202, 112
 LINE_H = 18
 TEXT_COLS = 21           # caratteri per riga nel font a tratto sottile
 
 STATES = {
-    # stato del chatbot: (titolo, forma, card agente grande?)
-    "starting": ("BOOTING", "ring", True),
-    "idle": ("READY", "face", True),
-    "listening": ("LISTENING", "wave", True),
-    "detecting": ("LISTENING", "wave", True),
-    "recognizing": ("DECODING...", "ring", True),
-    "answering...": ("THINKING...", "ring", True),
-    "thinking": ("THINKING...", "ring", True),
-    "tool calling": ("TOOLS...", "ring", True),
-    "queued": ("QUEUED...", "ring", True),
-    "answering": ("SPEAKING", "spectrum", False),
-    "music": ("MUSIC", "spectrum", True),
-    "confirm": ("CONFIRM?", "face", False),
-    "error": ("ERROR", "scatter", False),
-    "camera": ("CAMERA", "ring", True),
+    # stato del chatbot: (titolo, katakana, forma, card agente grande?, cosa fa Rocky)
+    "starting": ("BOOTING", "キドウ", "dog", True, "sit"),
+    "idle": ("READY", "レディ", "dog", True, "idle"),
+    "listening": ("LISTENING", "リスニング", "wave", True, None),
+    "detecting": ("LISTENING", "リスニング", "wave", True, None),
+    "recognizing": ("DECODING...", "デコード", "dog", True, "busy"),
+    "answering...": ("THINKING...", "シンキング", "dog", True, "busy"),
+    "thinking": ("THINKING...", "シンキング", "dog", True, "busy"),
+    "tool calling": ("TOOLS...", "ツール", "dog", True, "busy"),
+    "queued": ("QUEUED...", "タイキ", "dog", True, "busy"),
+    "answering": ("SPEAKING", "スピーキング", "spectrum", False, None),
+    "music": ("MUSIC", "ミュージック", "spectrum", True, None),
+    "confirm": ("CONFIRM?", "カクニン", "dog", False, "sit"),
+    "error": ("ERROR", "エラー", "scatter", False, None),
+    "camera": ("CAMERA", "カメラ", "dog", True, "sit"),
 }
+LABEL_KANA = {"AGENT STATUS": "ジョウタイ", "INPUT": "インプット", "OUTPUT": "アウトプット",
+              "TERMINAL": "ターミナル", "ERROR": "エラー", "VISION": "ビジョン"}
 
 DEFAULT_HINT_PREFIXES = ("Long Press the button", "Waiting for message")
 TOOL_TAG_RE = re.compile(r"(?<![A-Za-z0-9])[%％﹪]\s*[A-Za-z_][\w.-]*(?:\s+[0-9]+s)?")
@@ -309,7 +316,9 @@ class Renderer(threading.Thread):
         # animazione
         self.t_start = time.time()
         self.last_tick = time.time()
-        self.morph = Morph("face")
+        self.morph = Morph("dog")
+        self.dog = Dog(self.rng)
+        self.kana = "レディ"
         self.split = float(SPLIT_BIG)
         self.title = "READY"
         self.title_t0 = -10.0
@@ -324,7 +333,6 @@ class Renderer(threading.Thread):
         self.glitch_until = 0.0
         self.glitch_amount = 0.0
         self.next_glitch = time.time() + 8
-        self.blink_at = time.time() + 3
         self._ip = (0.0, "")
         self._img = (None, None)
         self._logo = None
@@ -351,16 +359,14 @@ class Renderer(threading.Thread):
     # -------------------------------------------------------------- elementi comuni
     def header(self, cv, s, now):
         p = self.p
-        cv.text(14, 7, gfx.prep(NAME)[:16], p["hi"], "s")
+        cv.text(14, 7, gfx.prep(NAME)[:20], p["hi"], "s")
+        x = 14 + gfx.text_width(gfx.prep(NAME)[:20], "s") + 8
         online = s["network"] is not False
-        listening = s["st"] in ("listening", "detecting")
-        if listening:
-            on = int(now * 3) % 2 == 0
-            cv.dot(124, 11, p["acc"] if on else p["dim"], 4)
-            cv.text(130, 7, "REC", p["acc"], "s")
+        if s["st"] in ("listening", "detecting"):
+            cv.disc(x + 2.5, 11, 2.5, p["acc"] if int(now * 3) % 2 == 0 else p["dim"])
+            cv.text(x + 8, 7, "REC", p["acc"], "s")
         else:
-            cv.dot(124, 11, p["acc"] if online else p["err"], 4)
-            cv.text(130, 7, "ONLINE" if online else "OFFLINE", p["mid"] if online else p["err"], "s")
+            cv.disc(x + 2.5, 11, 2.5, p["acc"] if online else p["err"])
         if s["battery"] is not None:
             try:
                 lvl = int(s["battery"])
@@ -369,51 +375,66 @@ class Renderer(threading.Thread):
             except (TypeError, ValueError):
                 pass
 
+    def card_label(self, cv, x, y, num, label):
+        """Etichetta di una card ("01  AGENT STATUS") con la traduzione in katakana accanto."""
+        p = self.p
+        txt = "%s  %s" % (num, label)
+        w = cv.text(x, y, txt, p["hi"], "s")
+        kana = LABEL_KANA.get(label)
+        if kana:
+            cv.text(x + w + 6, y, kana, p["dim"], "s")
+
     def logo(self, cv, y_center, color_main=None, color_sub=None):
-        """Logo: immagine caricata dall'utente oppure il nome in grandi puntini."""
+        """Logo: il nome in grandi puntini (o l'immagine caricata), con katakana e versione."""
         p = self.p
         if gfx.file_exists(LOGO_IMAGE):
             if self._logo is None:
                 try:
-                    self._logo = gfx.dot_image(LOGO_IMAGE, 180, 150, p, pitch=3, dot=2, fit="contain")
+                    self._logo = gfx.dot_image(LOGO_IMAGE, 180, 138, p, pitch=3, dot=2, fit="contain")
                 except Exception as e:
                     print(f"[Cyberdeck] Logo non leggibile: {e}")
                     self._logo = False
             if self._logo is not False:
-                cv.blit(self._logo, (W - 180) // 2, y_center - 95)
-                cv.text_center(y_center + 64, gfx.prep(NAME, True)[:20], color_main or p["hi"], "s")
+                cv.blit(self._logo, (W - 180) // 2, y_center - 100)
+                cv.text_center(y_center + 46, gfx.prep(NAME)[:30], color_main or p["hi"], "s")
+                cv.text_center(y_center + 60, NAME_KANA, p["fg"], "s")
+                cv.text_center(y_center + 74, VERSION, p["dim"], "s")
                 return
         words = gfx.prep(NAME, True).split()
         main = words[0] if words else "CYBERDECK"
-        sub = " ".join(words[1:])
+        sub = gfx.prep(" ".join(NAME.split()[1:]))
         mode = "D" if gfx.text_width(main, "D") <= 220 else ("d" if gfx.text_width(main, "d") <= 220 else "s")
-        cw, chh = gfx.cell_size(mode)
+        _cw, chh = gfx.cell_size(mode)
         x = (W - gfx.text_width(main, mode)) // 2
-        cv.text(x, y_center - chh, main, color_main or p["hi"], mode)
+        top = y_center - chh - 6
+        cv.text(x, top, main, color_main or p["hi"], mode)
+        y = top + chh + 2
         if sub:
-            # "Pi" (o il resto del nome) allineato a destra sotto, nel colore accento
-            sub_txt = gfx.prep(" ".join(NAME.split()[1:]))
-            cv.text(x + gfx.text_width(main, mode) - gfx.text_width(sub_txt, mode), y_center + 2,
-                    sub_txt, color_sub or p["acc"], mode)
-        cv.text_center(y_center + chh + 12, "AI TERMINAL // ONLINE", p["dim"], "s")
+            # il resto del nome ("ROCKY Pi") allineato a destra sotto, nel colore accento
+            sm = mode if gfx.text_width(sub, mode) <= 220 else "d"
+            cv.text(x + gfx.text_width(main, mode) - gfx.text_width(sub, sm), y, sub, color_sub or p["acc"], sm)
+            y += gfx.cell_size(sm)[1] + 4
+        cv.text_center(y + 2, NAME_KANA, p["fg"], "s")
+        cv.text_center(y + 16, VERSION + "  //  AI TERMINAL", p["dim"], "s")
 
     # -------------------------------------------------------------- dashboard
     def target_for(self, s, now):
+        """Titolo, katakana, forma, card grande?, comportamento di Rocky per lo stato attuale."""
         st = s["st"]
         if st == "idle" and (s["answer"] or s["question"]) and not (
                 HOME_TIMEOUT > 0 and now - s["last_activity"] > HOME_TIMEOUT):
-            return "READY", "face", False
-        title, shape, big = STATES.get(st, (gfx.prep(s["status"], True)[:12] or "READY", "ring", True))
+            return "READY", "レディ", "dog", False, "idle"
         if st == "answering" and not s["answer"]:
-            return "THINKING...", "ring", True
-        return title, shape, big
+            return STATES["thinking"]
+        return STATES.get(st, (gfx.prep(s["status"], True)[:12] or "READY", "", "dog", True, "busy"))
 
     def compose_dash(self, s, now, dt):
         p = self.p
-        title, shape, big = self.target_for(s, now)
+        title, kana, shape, big, dog_mode = self.target_for(s, now)
         if title != self.title:
-            self.title, self.title_t0 = title, now
+            self.title, self.kana, self.title_t0 = title, kana, now
         self.morph.set(shape, now)
+        self.dog.set_mode(dog_mode if shape == "dog" else "hidden", now)
         target = SPLIT_BIG if big else SPLIT_COMPACT
         self.split += (target - self.split) * (1 - math.exp(-dt * 6))
         split = int(round(self.split))
@@ -423,32 +444,36 @@ class Renderer(threading.Thread):
 
         # ---- card 01: stato dell'agente
         cv.card(CARD_X, TOP, CARD_W, split - TOP)
-        cv.text(16, TOP + 9, "01  AGENT STATUS", p["hi"], "s")
+        self.card_label(cv, 16, TOP + 9, "01", "AGENT STATUS")
         st = s["st"]
         if st in ("listening", "detecting"):
             if int(now * 3) % 2 == 0:
-                cv.dot(198, TOP + 13, p["acc"], 4)
-            cv.text(204, TOP + 9, "REC", p["acc"], "s")
+                cv.disc(199.5, TOP + 13, 2.5, p["acc"])
+            cv.text(205, TOP + 9, "REC", p["acc"], "s")
         elif st == "answering":
             cv.text_right(224, TOP + 9, "LIVE", p["acc"], "s")
         k = (now - self.title_t0) / 0.45
         shown = gfx.scramble(self.title, k, int(now * 20))
         cv.text(16, TOP + 22, shown, p["hi"] if k >= 1 else p["fg"], "d")
+        if self.kana:  # traduzione in katakana sotto il titolo, appare dopo la decodifica
+            kk = max(0.0, min(1.0, (now - self.title_t0 - 0.3) / 0.3))
+            cv.text(16, TOP + 43, self.kana, mix(p["card"], p["dim"], kk), "s")
         stats_a = max(0.0, min(1.0, (split - 145) / 40.0))
-        vis_top = TOP + 48
+        vis_top = TOP + 56
         vis_bot = split - 8 - int(36 * stats_a)
         if vis_bot - vis_top > 8:
-            blink = 1.0
-            if now >= self.blink_at:
-                bk = now - self.blink_at
-                blink = abs(1 - bk / 0.09) if bk < 0.18 else 1.0
-                if bk >= 0.18:
-                    self.blink_at = now + float(self.rng.uniform(2.5, 6))
-            pos, col = self.morph.points(now, (16, vis_top, 208, vis_bot - vis_top), p,
-                                         face={"blink": blink})
-            Morph.draw(cv, pos, col)
-            if self.morph.cur == "wave":  # linea di base puntinata, come nel riferimento
-                cv.hdots(18, (vis_top + vis_bot) // 2, 204, p["faint"], 3)
+            box = (16, vis_top, 208, vis_bot - vis_top)
+            dog_w = self.morph.weight(now, "dog")
+            if dog_w > 0.02 and box[3] >= 40:  # il "pavimento" su cui sta Rocky
+                gy = int(Dog.anchor(box)[1] + Dog.pitch(box))
+                cv.hdots(20, gy, 200, mix(p["card"], p["faint"], dog_w), 3)
+            wave_w = self.morph.weight(now, "wave")
+            if wave_w > 0.02:  # linea di base puntinata dell'onda, come nel riferimento
+                cv.hdots(18, (vis_top + vis_bot) // 2, 204, mix(p["card"], p["faint"], wave_w), 3)
+            pos, col = self.morph.points(now, box, p, dog={"dog": self.dog})
+            Morph.draw(cv, pos, col, 2 if Dog.pitch(box) >= 2.5 else 1)
+            if dog_w > 0.98:
+                self.dog.draw_extras(cv, box, p)
         if stats_a > 0.02:
             y = split - 40
             lab, val = mix(p["card"], p["dim"], stats_a), mix(p["card"], p["fg"], stats_a)
@@ -469,7 +494,7 @@ class Renderer(threading.Thread):
             label = "TERMINAL"
         if st == "error":
             label = "ERROR"
-        cv.text(16, top2 + 9, "02  " + label, p["hi"], "s")
+        self.card_label(cv, 16, top2 + 9, "02", label)
         cv.text_right(224, top2 + 9, time.strftime("%H:%M"), p["dim"], "s")
         lines, cursor_ok = self.terminal_lines(s, now, dt)
         nlines = max(1, (BOTTOM - 8 - (top2 + 24)) // LINE_H)
@@ -491,9 +516,8 @@ class Renderer(threading.Thread):
                 self.next_glitch = now + float(self.rng.uniform(6, 16)) / max(GLITCH, 0.1)
             if now < self.glitch_until:
                 amount = self.glitch_amount
-        typing = self.qrev < len(s["question"]) or self.arev < len(s["answer"])
         anim = True  # la dashboard è sempre animata (respiro, rotazione, onda...)
-        fast = typing or self.morph.active(now) or abs(target - self.split) > 0.5 or st != "idle"
+        fast = True  # Rocky, l'onda e le barre sono sempre in movimento
         return cv.a, amount, anim, fast
 
     def terminal_lines(self, s, now, dt):
@@ -539,10 +563,10 @@ class Renderer(threading.Thread):
         cv = Canvas(p)
         self.header(cv, s, now)
         cv.card(CARD_X, TOP, CARD_W, BOTTOM - TOP)
-        cv.text(16, TOP + 9, "03  VISION", p["hi"], "s")
+        self.card_label(cv, 16, TOP + 9, "03", "VISION")
         if int(now * 2) % 2 == 0:
-            cv.dot(198, TOP + 13, p["acc"], 4)
-        cv.text(204, TOP + 9, "REC", p["acc"], "s")
+            cv.disc(199.5, TOP + 13, 2.5, p["acc"])
+        cv.text(205, TOP + 9, "REC", p["acc"], "s")
         path = s["image_path"]
         if self._img[0] != path:
             try:
@@ -594,30 +618,33 @@ class Renderer(threading.Thread):
         return fast
 
     # -------------------------------------------------------------- sequenze
-    def _status_block(self, cv, el, title, word, lines, prompt, t_title=0.0):
+    def _status_block(self, cv, el, title, word, kana, lines, prompt, t_title=0.0):
         """Blocco "SYSTEM STATUS" (come nel monitor di riferimento). el = secondi dall'inizio."""
         p = self.p
-        y0 = 126
+        y0 = 124
         if el >= t_title:
             n = int((el - t_title) * 36)
-            cv.dot(19, y0 + 9, p["acc"], 9)
+            cv.disc(19, y0 + 10, 4.5, p["acc"])
             cv.text(30, y0, title[:n], p["hi"], "b")
         t_word = t_title + 0.45
         if el >= t_word:
             on = (el - t_word) > 0.3 or int((el - t_word) * 20) % 2 == 0
             if on:
                 cv.text(14, y0 + 22, word, p["fg"], "B")
+            if el >= t_word + 0.3:
+                n = int((el - t_word - 0.3) * 40)
+                cv.text(16, y0 + 64, kana[:n], p["mid"], "s")
         t_lines = t_word + 0.35
         for i, ln in enumerate(lines):
             ti = t_lines + i * 0.35
             if el >= ti:
                 n = int((el - ti) * 90)
-                cv.text(16, y0 + 70 + i * 12, ln[:n][:36], p["fg"], "s")
+                cv.text(16, y0 + 80 + i * 12, ln[:n][:36], p["fg"], "s")
         t_prompt = t_lines + len(lines) * 0.35 + 0.2
         if el >= t_prompt:
-            cv.text(16, y0 + 116, prompt, p["hi"], "t")
+            cv.text(16, y0 + 122, prompt, p["hi"], "t")
             if int((el - t_prompt) * 2.5) % 2 == 0:
-                cv.rect(16 + gfx.text_width(prompt, "t") + 4, y0 + 117, 8, 15, p["acc"])
+                cv.rect(16 + gfx.text_width(prompt, "t") + 4, y0 + 123, 8, 15, p["acc"])
         return t_prompt
 
     def _log(self, cv, el, lines, t0, y_max=118, step=0.12):
@@ -658,6 +685,7 @@ class Renderer(threading.Thread):
         ip = self.ip()
         batt = "--" if s["battery"] is None else "%s%%" % s["battery"]
         return [
+            "%s %s // boot" % (gfx.prep(NAME), VERSION),
             "Initializing terminal core...",
             "Collecting boot services...",
             "Mounting root:/deck/sys ... ok",
@@ -669,11 +697,12 @@ class Renderer(threading.Thread):
             "Linking AI core: %s" % _env("LLM_SERVER", "--").upper(),
             "Linking voice: ASR %s / TTS %s" % (_env("ASR_SERVER", "--").upper(), _env("TTS_SERVER", "--").upper()),
             "Syncing clock: %s" % time.strftime("%Y-%m-%d %H:%M"),
+            "Waking up Rocky ... woof!",
             "Evaluating response...",
             "Connecting System Status: online",
         ]
 
-    def _play(self, duration, frame_fn, fps=25):
+    def _play(self, duration, frame_fn, fps=30):
         start = time.time()
         while True:
             el = time.time() - start
@@ -703,7 +732,8 @@ class Renderer(threading.Thread):
             if lines:
                 self._log(cv, el, lines, t_log)
             if el >= t_status:
-                self._status_block(cv, el - t_status, "SYSTEM STATUS:", "ONLINE.", BOOT_LINES, ENTER_TEXT)
+                self._status_block(cv, el - t_status, "SYSTEM STATUS:", "ONLINE.",
+                                   "システム ステータス: オンライン", BOOT_LINES, ENTER_TEXT)
             amount = 0.0
             if el > t_end - 0.3:
                 amount = (el - (t_end - 0.3)) / 0.3
@@ -735,8 +765,8 @@ class Renderer(threading.Thread):
                 cv = Canvas(self.p)
                 self._log(cv, el, lines, t_log)
                 if el >= t_status:
-                    self._status_block(cv, el - t_status, "SYSTEM STATUS:", "OFFLINE.", SHUTDOWN_LINES,
-                                       "[ TERMINAL CLOSED ]")
+                    self._status_block(cv, el - t_status, "SYSTEM STATUS:", "OFFLINE.",
+                                       "システム ステータス: オフライン", SHUTDOWN_LINES, "[ TERMINAL CLOSED ]")
                 amount = (el - (t_logo - 0.25)) / 0.25 if el > t_logo - 0.25 else 0.0
                 return cv.a, amount
             le = el - t_logo
@@ -758,12 +788,15 @@ class Renderer(threading.Thread):
             print(f"[Cyberdeck] Errore durante l'accensione: {e}")
             self.intro_t0 = time.time()
         while self.running and not self.shutdown_requested.is_set():
+            t_frame = time.time()
             try:
                 fast = self.render_once()
             except Exception as e:
                 print(f"[Cyberdeck] Errore di disegno: {e}")
                 fast = False
-            self.event.wait(1 / 25 if fast else 1 / 10)
+            # ritmo costante: ~30 fotogrammi al secondo durante le animazioni, 12 a riposo
+            period = 1 / 30 if fast else 1 / 12
+            self.event.wait(max(0.0, period - (time.time() - t_frame)))
             self.event.clear()
         if self.shutdown_requested.is_set():
             try:
