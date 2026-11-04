@@ -52,7 +52,8 @@ except Exception:  # il pannello funziona anche senza il font
 # (chiave, etichetta, tipo, opzioni, valore predefinito, aiuto, gruppo)
 FIELDS = [
     ("UI_STYLE", "Interfaccia", "select",
-     [("cyberdeck", "CYBERDECK"), ("original", "Originale PiSugar")], "cyberdeck", "", "Stile"),
+     [("cyberdeck2", "CYBERDECK ROCKY Pi v2.0"), ("cyberdeck", "CYBERDECK ROCKY Pi v1.0"),
+      ("original", "Originale PiSugar")], "cyberdeck", "", "Stile"),
     ("DECK_PALETTE", "Colori", "select",
      [("verde", "Verde fosforo"), ("ambra", "Ambra"), ("ghiaccio", "Ghiaccio")], "verde", "", "Stile"),
     ("DECK_NAME", "Nome", "text", None, "CYBERDECK ROCKY Pi",
@@ -369,7 +370,7 @@ a{color:var(--hi)}
 PAGE = """<!doctype html><html lang="it"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CYBERDECK ROCKY Pi</title><style>{{ css }}</style></head><body>
-<header><b><span class="led"></span>CYBERDECK ROCKY Pi v1.0 // PANNELLO</b>{% if auth %}<a href="{{ url_for('logout') }}">esci</a>{% endif %}</header>
+<header><b><span class="led"></span>CYBERDECK ROCKY Pi // PANNELLO</b>{% if auth %}<a href="{{ url_for('logout') }}">esci</a>{% endif %}</header>
 <main>
 {% if msg %}<div class="msg {{ 'err' if err else '' }}">{{ msg }}</div>{% endif %}
 {% block body %}{% endblock %}

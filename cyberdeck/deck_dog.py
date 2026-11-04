@@ -249,14 +249,16 @@ def _patch(g, name):
     return g
 
 
-def _points(g):
+def _points(g, legend=None):
     """Griglia -> (posizioni, chiavi colore). Origine: centro dei piedi; y verso l'alto negativo."""
+    legend = legend or LEGEND
+    h, w = len(g), len(g[0])
     pos, keys = [], []
     for y, row in enumerate(g):
         for x, c in enumerate(row):
-            if c in LEGEND:
-                pos.append((x - SPR_W // 2, y - (SPR_H - 1)))  # coordinate intere: griglia regolare
-                keys.append(LEGEND[c])
+            if c in legend:
+                pos.append((x - w // 2, y - (h - 1)))  # coordinate intere: griglia regolare
+                keys.append(legend[c])
     order = np.argsort(np.array(pos)[:, 0], kind="stable")  # da sinistra a destra
     return np.array(pos, dtype=float)[order], [keys[i] for i in order]
 
@@ -364,6 +366,14 @@ def _cycle(names, period):
 
 
 class Dog:
+    # Grafica e misure dello sprite (Rocky v1.0); le altre versioni ridefiniscono questi valori
+    FRAMES = FRAMES
+    SPR_W, SPR_H = SPR_W, SPR_H
+    ZZ = (10, -15)          # da dove escono le "z" del pisolino (sopra la testa)
+    PAW_X = (4, 8)          # dove le zampe anteriori lanciano la terra mentre scava
+    MOUND_X = -12           # dove si accumula la terra (dietro Rocky)
+    JUMP_H = 4.0            # altezza del salto (in puntini)
+
     def __init__(self, rng=None):
         self.rng = rng or np.random.default_rng()
         self.mode = None
@@ -443,7 +453,7 @@ class Dog:
 
     def _sample(self, seg, t, u):
         name = seg.frame_at(t)
-        pos, keys = FRAMES[name]
+        pos, keys = self.FRAMES[name]
         tf = seg.tf_at(u, t)
         return _transform(pos, tf), self._colors(keys)
 
@@ -485,13 +495,13 @@ class Dog:
         px, col = px[order][idx], col[order][idx]
         return px, col
 
-    @staticmethod
-    def pitch(box):
+    @classmethod
+    def pitch(cls, box):
         """Passo dei puntini: segue con continuità la grandezza del riquadro (niente scatti
         mentre le card si ridimensionano) e si aggancia a un valore intero (3, 2, 1 px) quando
         ci è vicino, così da fermo la griglia di puntini è perfettamente regolare."""
         _x, _y, w, h = box
-        p = max(1.0, min(3.0, h / (SPR_H + 3), w / (SPR_W + 6)))
+        p = max(1.0, min(3.0, h / (cls.SPR_H + 3), w / (cls.SPR_W + 6)))
         r = round(p)
         return float(r) if abs(p - r) < 0.12 else p
 
@@ -581,7 +591,7 @@ class Dog:
                 ph = (t * 0.6 + k / 3.0) % 1.0
                 if t > 0.6:
                     col = dog.p["mid"] if ph < 0.7 else dog.p["dim"]
-                    dog.extras.append(("text", 10 + ph * 4 + k * 1.5, -15 - ph * 6, ("z" if k % 2 else "Z", col)))
+                    dog.extras.append(("text", dog.ZZ[0] + ph * 4 + k * 1.5, dog.ZZ[1] - ph * 6, ("z" if k % 2 else "Z", col)))
 
         return [
             Seg(0.9, "lie", morph=0.7),
@@ -603,7 +613,7 @@ class Dog:
             if now_k != dog.last_dirt:
                 dog.last_dirt = now_k
                 for _ in range(3):
-                    dog.dirt.append([float(dog.rng.uniform(4, 8)), -0.5,
+                    dog.dirt.append([float(dog.rng.uniform(*dog.PAW_X)), -0.5,
                                      float(dog.rng.uniform(-20, -9)), float(dog.rng.uniform(-16, -7)), t])
             alive = []
             for d in dog.dirt:
@@ -621,7 +631,7 @@ class Dog:
             # cumulo di terra dietro Rocky
             m = int(dog.mound)
             for i in range(m):
-                hx = -12 - (i % 5) * 0.9
+                hx = dog.MOUND_X - (i % 5) * 0.9
                 hy = -(i // 5) * 0.9
                 dog.extras.append(("dot", hx + (i // 5) * 0.45, hy, dog.p["mid"]))
 
@@ -644,7 +654,7 @@ class Dog:
             return (0.0, 0.0, 1.0 + 0.07 * e, 1.0 - 0.16 * e, 0.0)
 
         def air(u, t):
-            h = 4.0 * math.sin(math.pi * u)
+            h = self.JUMP_H * math.sin(math.pi * u)
             return (0.0, -h, 1.0 - 0.03 * math.sin(math.pi * u), 1.0 + 0.06 * math.sin(math.pi * u), 0.0)
 
         def land(u, t):

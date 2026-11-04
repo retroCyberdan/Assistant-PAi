@@ -97,6 +97,31 @@ Quando spegni o riavvii il Raspberry (anche dal pannello web o con il tasto dell
 
 Accensione e spegnimento hanno anche **effetti sonori** (si possono disattivare).
 
+## CYBERDECK ROCKY Pi v2.0
+
+La versione **v2.0** è identica alla v1.0 (stessa dashboard, stesse animazioni, stesse sequenze di
+accensione e spegnimento, stesso pannello), ma ha un **nuovo Rocky**. È ridisegnato
+dall'illustrazione di riferimento, in vista di tre quarti con il muso rivolto verso chi guarda:
+- orecchie cadenti marroni aperte ai lati della testa;
+- lista bianca al centro del muso, occhi grandi, naso nero;
+- petto bianco con le ombre lavanda, corpo marrone con la sella scura;
+- coda alta con la punta bianca.
+
+Tutte le sue animazioni sono ridisegnate in questo stile: seduto con la lingua, giro, pisolino,
+scavo, salto e rotolata.
+
+![CYBERDECK v2.0](anteprime/cyberdeck-v2.png)
+
+![Rocky v2.0](anteprime/rocky-v2.gif)
+
+Demo completa: [cyberdeck-v2-demo.gif](anteprime/cyberdeck-v2-demo.gif)
+
+**Come sceglierla:**
+- dal pannello web, *Interfaccia → CYBERDECK ROCKY Pi v2.0*;
+- oppure nel `.env` con `UI_STYLE=cyberdeck2`.
+
+Per tornare alla v1.0: `UI_STYLE=cyberdeck`.
+
 ## Installazione (sul Raspberry Pi)
 
 Prima completa la [GUIDA](../GUIDA.md) fino alla Fase 7 (chatbot funzionante). Poi:
@@ -168,6 +193,7 @@ Si cambiano dal pannello web; a mano funzionano così:
 
 ```ini
 UI_STYLE=cyberdeck
+# cyberdeck = v1.0, cyberdeck2 = v2.0 (nuovo Rocky), original = interfaccia PiSugar
 DECK_NAME=CYBERDECK ROCKY Pi
 DECK_NAME_KANA=サイバーデッキ ロッキー パイ
 DECK_PALETTE=verde
@@ -184,7 +210,7 @@ DECK_TEXT_SPEED=60
 ```
 
 Note sulle voci:
-- `UI_STYLE`: `cyberdeck` oppure `original`;
+- `UI_STYLE`: `cyberdeck` (v1.0), `cyberdeck2` (v2.0) oppure `original`;
 - `DECK_PALETTE`: `verde`, `ambra` oppure `ghiaccio`;
 - `DECK_BOOT` e `DECK_SHUTDOWN`: `full`, `quick` oppure `off`;
 - `DECK_CRT` e `DECK_GLITCH`: da 0 a 1;
@@ -221,7 +247,8 @@ intercetta, mostra l'animazione di spegnimento e poi esce.
 | File | Contenuto |
 |---|---|
 | `deck_ui.py` | protocollo socket, dashboard, transizioni, accensione e spegnimento, suoni |
-| `deck_dog.py` | Rocky: sprite pixel art, pose, animazioni a riposo e durante l'elaborazione |
+| `deck_dog.py` | Rocky v1.0: sprite pixel art, pose, animazioni a riposo e durante l'elaborazione |
+| `deck_dog2.py` | Rocky v2.0: nuova grafica (vista di tre quarti), stesse animazioni |
 | `deck_gfx.py` | font dot-matrix, card, forme a puntini e morph, immagini a puntini, glitch, CRT |
 | `deck_font.py` | font bitmap originale: lettere latine 5x7 con accenti italiani e katakana 7x7 |
 | `deck_panel.py` | pannello web (Flask) |

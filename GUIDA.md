@@ -295,6 +295,10 @@ cd ~/Assistant-PAi && git pull
 bash cyberdeck/install.sh
 ```
 
+Ci sono due versioni del tema, che si scelgono dal pannello web:
+- **v1.0**, con Rocky di profilo;
+- **v2.0**, con un nuovo Rocky in vista di tre quarti, ridisegnato dall'illustrazione di riferimento.
+
 Istruzioni complete in **[cyberdeck/README.md](cyberdeck/README.md)**.
 
 ---

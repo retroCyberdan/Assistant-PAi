@@ -16,6 +16,9 @@ Le forme sono fatte degli stessi puntini, che scivolano da una forma all'altra:
 ogni passaggio è fluido. All'accensione e allo spegnimento viene mostrata una
 sequenza glitch con il logo e il terminale "SYSTEM STATUS".
 
+Temi: UI_STYLE=cyberdeck  -> CYBERDECK ROCKY Pi v1.0
+      UI_STYLE=cyberdeck2 -> CYBERDECK ROCKY Pi v2.0 (stesso tema, nuovo Rocky)
+
 Impostazioni (file .env del chatbot, modificabili dal pannello web):
   DECK_NAME            nome mostrato in testata e nel logo   (CYBERDECK ROCKY Pi)
   DECK_NAME_KANA       il nome in katakana, sotto il logo    (サイバーデッキ ロッキー パイ)
@@ -54,6 +57,7 @@ if HERE not in sys.path:
 
 import deck_gfx as gfx  # noqa: E402
 from deck_dog import Dog  # noqa: E402
+from deck_dog2 import Dog2  # noqa: E402
 from deck_gfx import Canvas, Morph, W, H, mix, ease  # noqa: E402
 
 # ------------------------------------------------------------------ impostazioni
@@ -73,7 +77,11 @@ def _num(name, default, lo, hi):
 
 NAME = _env("DECK_NAME", "CYBERDECK ROCKY Pi")
 NAME_KANA = gfx.prep(_env("DECK_NAME_KANA", "サイバーデッキ ロッキー パイ"))  # scarta i caratteri non disegnati
-VERSION = "v1.0"
+# Tema: CYBERDECK ROCKY Pi v1.0 (UI_STYLE=cyberdeck) oppure v2.0 (UI_STYLE=cyberdeck2).
+# Le due versioni sono identiche tranne la grafica di Rocky (deck_dog / deck_dog2).
+V2 = _env("UI_STYLE", "cyberdeck").strip().lower() == "cyberdeck2"
+VERSION = "v2.0" if V2 else "v1.0"
+DOG = Dog2 if V2 else Dog
 PAL = gfx.palette(_env("DECK_PALETTE", "verde"))
 LOGO_IMAGE = _env("DECK_LOGO_IMAGE", "")
 HINT = _env("DECK_HINT", "Tieni premuto il tasto e parla")
@@ -317,7 +325,7 @@ class Renderer(threading.Thread):
         self.t_start = time.time()
         self.last_tick = time.time()
         self.morph = Morph("dog")
-        self.dog = Dog(self.rng)
+        self.dog = DOG(self.rng)
         self.kana = "レディ"
         self.split = float(SPLIT_BIG)
         self.title = "READY"
@@ -465,13 +473,13 @@ class Renderer(threading.Thread):
             box = (16, vis_top, 208, vis_bot - vis_top)
             dog_w = self.morph.weight(now, "dog")
             if dog_w > 0.02 and box[3] >= 40:  # il "pavimento" su cui sta Rocky
-                gy = int(Dog.anchor(box)[1] + Dog.pitch(box))
+                gy = int(self.dog.anchor(box)[1] + self.dog.pitch(box))
                 cv.hdots(20, gy, 200, mix(p["card"], p["faint"], dog_w), 3)
             wave_w = self.morph.weight(now, "wave")
             if wave_w > 0.02:  # linea di base puntinata dell'onda, come nel riferimento
                 cv.hdots(18, (vis_top + vis_bot) // 2, 204, mix(p["card"], p["faint"], wave_w), 3)
             pos, col = self.morph.points(now, box, p, dog={"dog": self.dog})
-            Morph.draw(cv, pos, col, 2 if Dog.pitch(box) >= 2.5 else 1)
+            Morph.draw(cv, pos, col, 2 if self.dog.pitch(box) >= 2.5 else 1)
             if dog_w > 0.98:
                 self.dog.draw_extras(cv, box, p)
         if stats_a > 0.02:

@@ -9,7 +9,7 @@ if [ "$1" = "--no-panel" ]; then PANEL=0; shift; fi
 APP="${1:-$HOME/whisplay-ai-chatbot}"
 PY="$APP/python"
 CONF="$HOME/.config/cyberdeck"
-FILES="deck_font.py deck_gfx.py deck_dog.py deck_ui.py deck_panel.py deck_preview.py"
+FILES="deck_font.py deck_gfx.py deck_dog.py deck_dog2.py deck_ui.py deck_panel.py deck_preview.py"
 
 if [ "$(id -u)" = "0" ]; then
   echo "Esegui lo script come utente normale (senza sudo): i permessi li chiede da solo."
@@ -20,7 +20,7 @@ if [ ! -f "$PY/chatbot-ui.py" ] && [ ! -f "$PY/chatbot-ui.original.py" ]; then
   exit 1
 fi
 
-echo "== CYBERDECK ROCKY Pi v1.0 =="
+echo "== CYBERDECK ROCKY Pi =="
 
 # 1. conserva l'interfaccia originale (una sola volta)
 if [ ! -f "$PY/chatbot-ui.original.py" ]; then
@@ -50,7 +50,7 @@ for f in $FILES; do cp "$SRC/$f" "$PY/"; done
 # 4. lanciatore: sceglie l'interfaccia in base a UI_STYLE nel file .env
 cat > "$PY/chatbot-ui.py" <<'PYEOF'
 # Lanciatore installato da Assistant-PAi/cyberdeck/install.sh
-# UI_STYLE=cyberdeck (default) oppure UI_STYLE=original nel file .env
+# UI_STYLE=cyberdeck (v1.0, default), UI_STYLE=cyberdeck2 (v2.0) oppure UI_STYLE=original nel file .env
 import os
 import runpy
 import sys
